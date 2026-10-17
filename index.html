@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="مكتبة علي المتروك" />
+  <title>جليس — المكتبة الخاصة لـ علي المتروك</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Tajawal', sans-serif; background-color: #0b1120; color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+    .gold-grad { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    .card-bg { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    @keyframes pulse-ring { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 18px rgba(245, 158, 11, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+    .mic-recording { animation: pulse-ring 1.6s infinite; background: #ef4444 !important; color: #fff !important; }
+  </style>
+</head>
+<body class="min-h-screen pb-24">
+
+  <!-- الشريط العلوي بهوية علي المتروك -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-10 h-10 rounded-xl gold-grad flex items-center justify-center text-slate-950 font-extrabold text-base shadow">ع</div>
+      <div>
+        <div class="flex items-center gap-1.5">
+          <h1 class="font-extrabold text-sm leading-none text-amber-400">جليس • مكتبة علي المتروك</h1>
+        </div>
+        <span id="cloudStatus" class="text-[11px] text-emerald-400">● الحساب: @ali_almatrouk • متصل بالسحابة</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <button onclick="toggleWakeLock()" id="wakeBtn" class="text-[11px] px-2 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">💡 الشاشة</button>
+      <button onclick="openModal('settingsModal')" class="text-[11px] px-2.5 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold">⚙️ Claude</button>
+    </div>
+  </header>
+
+  <main class="max-w-lg mx-auto p-4 space-y-4">
+
+    <!-- 1. التبويب الأول: الرئيسية (3 عناصر فقط بدون تعقيد) -->
+    <section id="tab-home" class="space-y-4">
+      <!-- بطاقة الترحيب الشخصي واقتباس اليوم -->
+      <div class="card-bg rounded-2xl p-4 relative overflow-hidden">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-amber-400">✨ حياك الله يا علي المتروك — اقتباس اليوم من مكتبتك</span>
+          <button onclick="nextQuote()" class="text-xs text-slate-400 hover:text-amber-300">اقتباس آخر ↻</button>
+        </div>
+        <p id="dailyQuoteText" class="text-sm text-slate-200 leading-relaxed font-medium">"إن التاريخ في ظاهره لا يزيد عن الإخبار، وفي باطنه نظر وتحقيق وتعليل للكائنات ومبادئها دقيق."</p>
+        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+          <span id="dailyQuoteBook" class="min-w-0">— من قراءاتك وملاحظاتك المحفوظة</span>
+          <button onclick="speakText(document.getElementById('dailyQuoteText').innerText)" class="text-amber-400 hover:underline">🔊 استماع</button>
+        </div>
+        <div class="mt-3 pt-2.5 border-t border-slate-700/60 flex flex-wrap gap-2 text-[11px]">
+          <button onclick="shareQuoteCard()" class="bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-lg font-bold">🖼 بطاقة مشاركة</button>
+          <button onclick="addQuote()" class="bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1 rounded-lg">➕ اقتباس</button>
+          <button onclick="deleteQuote()" class="bg-slate-800 border border-slate-700 text-rose-300 px-2.5 py-1 rounded-lg">🗑 حذف</button>
+        </div>
+      </div>
+
+      <!-- قراءتي: الهدف اليومي والسلسلة -->
+      <div class="card-bg rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-amber-400">📈 قراءتي</span>
+          <span id="streakBadge" class="text-[11px] bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded-lg font-bold"></span>
+        </div>
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-[11px] text-slate-300">
+            <span id="goalText"></span>
+            <button onclick="setDailyGoal()" class="text-amber-400 underline">تعديل الهدف</button>
+          </div>
+          <div class="h-2 rounded-full bg-slate-800 overflow-hidden"><div id="goalBar" class="h-full gold-grad rounded-full" style="width:0%"></div></div>
+        </div>
+        <div class="flex items-center justify-between text-[11px] text-slate-400">
+          <span id="weekText"></span>
+          <button onclick="weeklySummary()" class="bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-lg font-bold">📅 ملخصي الأسبوعي</button>
+        </div>
+      </div>
+
+      <!-- العنصر 2: كتابك الحالي + اختيار أو حذف الكتب -->
+      <div class="card-bg rounded-2xl p-4 space-y-4">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs text-slate-400 font-medium">📚 كتابك الحالي:</span>
+          <div class="flex items-center gap-1.5 flex-1 justify-end">
+            <select id="bookSelector" onchange="selectBook(this.value)" class="bg-slate-800 text-xs text-amber-300 border border-slate-700 rounded-lg px-2.5 py-1.5 max-w-[190px]"></select>
+            <button onclick="deleteCurrentBook()" title="حذف هذا الكتاب" class="text-xs bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 px-2.5 py-1.5 rounded-lg font-bold">🗑 حذف</button>
+          </div>
+        </div>
+
+        <!-- حالة عدم وجود كتب -->
+        <div id="emptyLibraryBox" class="hidden text-center py-6 space-y-3">
+          <div class="text-3xl">📖</div>
+          <p class="text-sm font-bold text-slate-200">مكتبتك جاهزة يا بوعلي!</p>
+          <p class="text-xs text-slate-400">اضغط الزر بالأسفل لإضافة أول كتاب تقرأه حالياً (مع تصوير الغلاف من الأمام والخلف أو رفع الـ PDF).</p>
+        </div>
+
+        <!-- تفاصيل الكتاب الحالي -->
+        <div id="activeBookBox" class="space-y-4">
+          <div class="flex gap-3.5 items-center">
+            <div class="relative shrink-0">
+              <img id="currentBookCover" src="" alt="غلاف" onclick="toggleCoverSide()" class="w-24 h-32 object-cover rounded-xl shadow-md border border-amber-500/40 bg-slate-800 cursor-pointer" />
+              <button id="flipCoverBtn" onclick="toggleCoverSide()" class="hidden absolute -bottom-2 inset-x-1 bg-slate-900/90 text-[10px] text-amber-300 border border-amber-500/40 rounded px-1 py-0.5 text-center">🔄 اقلب للخلف</button>
+            </div>
+            <div class="space-y-1.5 flex-1">
+              <h2 id="currentBookTitle" class="text-lg font-extrabold text-white"></h2>
+              <p id="currentBookAuthor" class="text-xs text-slate-400"></p>
+              <div class="text-[11px] text-emerald-400 bg-emerald-950/50 border border-emerald-800/50 px-2 py-0.5 rounded-md inline-block" id="bookSyncBadge">
+                ✓ النسخة الخلفية جاهزة ومعايرة
+              </div>
+              <p class="text-xs text-slate-300 pt-1">وصلت إلى الصفحة الورقية: <strong id="homeCurrentPage" class="text-amber-400 text-sm">1</strong> <span id="bookPercent" class="text-[11px] text-slate-400"></span></p>
+              <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden"><div id="bookBar" class="h-full gold-grad rounded-full" style="width:0%"></div></div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/60 border border-slate-700 rounded-xl p-2.5 space-y-2">
+            <p id="bookFileInfo" class="text-[11px] text-slate-300"></p>
+            <div class="flex gap-2">
+              <label class="flex-1 text-center text-[11px] bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded-lg py-1.5 font-bold cursor-pointer">📎 إضافة / استبدال ملف
+                <input type="file" accept=".pdf,.txt,.md,.epub,.docx" class="hidden" onchange="attachFileToBook(event)" />
+              </label>
+              <button onclick="removeBookFile()" id="removeFileBtn" class="text-[11px] bg-rose-500/15 text-rose-300 border border-rose-500/30 rounded-lg px-3 py-1.5 font-bold">🗑 إزالة الملف</button>
+            </div>
+            <button onclick="findCopyForCurrent()" class="w-full text-[11px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-lg py-1.5 font-bold">🔎 ابحث عن نسخة رقمية مجانية للكتاب</button>
+            <p id="attachStatus" class="text-[11px] text-emerald-400"></p>
+            <div id="copyResultsHome" class="space-y-1.5 max-h-56 overflow-y-auto"></div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <button onclick="switchTab('discuss')" class="gold-grad text-slate-950 font-bold py-3 px-4 rounded-xl text-sm shadow-lg flex items-center justify-center gap-1.5">
+              🎙️ ابدأ النقاش الصوتي
+            </button>
+            <button onclick="whereWereWe()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-1.5">
+              🔊 وين وصلنا؟
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- العنصر 3: زر إضافة كتاب جديد -->
+      <button onclick="openModal('addBookModal')" class="w-full py-4 rounded-2xl border-2 border-dashed border-amber-500/50 hover:border-amber-400 text-amber-300 font-bold text-sm flex items-center justify-center gap-2 bg-amber-500/10 shadow">
+        ➕ إضافة كتاب جديد (تصوير الغلاف أمام وخلف / بحث / PDF)
+      </button>
+    </section>
+
+    <!-- مكتبتي: كل الكتب -->
+    <section id="tab-library" class="hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm text-amber-400">📚 مكتبتي (<span id="libCount">0</span> كتاب)</h3>
+        <button onclick="openModal('addBookModal')" class="gold-grad text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs">➕ إضافة كتاب</button>
+      </div>
+      <input id="libSearch" oninput="renderLibrary()" type="text" placeholder="ابحث في مكتبتك بالعنوان أو المؤلف..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+      <div id="libGrid" class="grid grid-cols-2 gap-3"></div>
+    </section>
+
+    <!-- 2. التبويب الثاني: جلسة النقاش الصوتي (رفيق الكتاب الورقي) -->
+    <section id="tab-discuss" class="hidden space-y-4">
+      <div class="card-bg rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-[11px] text-slate-400">أنت تقرأ الآن ورقياً يا علي في:</span>
+            <h3 id="discussBookTitle" class="font-bold text-amber-400 text-sm"></h3>
+          </div>
+          <div class="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
+            <span class="text-xs text-slate-400">صفحة:</span>
+            <button onclick="changePage(-1)" class="text-slate-400 px-1.5 font-bold">-</button>
+            <input id="paperPageInput" type="number" value="1" onchange="updatePage(this.value)" class="w-14 bg-transparent text-center font-extrabold text-amber-400 text-base focus:outline-none" />
+            <button onclick="changePage(1)" class="text-slate-400 px-1.5 font-bold">+</button>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-400 flex items-center justify-between bg-slate-900/60 px-3 py-2 rounded-lg">
+          <span>🧠 النموذج:</span>
+          <select id="quickModelSelect" onchange="setModel(this.value)" class="bg-slate-800 text-amber-300 border border-slate-700 rounded-lg px-2 py-1 text-[11px] max-w-[190px]"></select>
+        </div>
+
+        <div class="space-y-1.5">
+          <span class="text-[11px] text-slate-400">💡 أسئلة ذكية جاهزة عن الكتاب:</span>
+          <div id="quickActions" class="flex flex-wrap gap-1.5"></div>
+        </div>
+
+        <div class="text-[11px] text-slate-400 flex items-center justify-between bg-slate-900/60 px-3 py-2 rounded-lg">
+          <span id="mappedPageInfo">الطبعة الورقية متزامنة (فرق الصفحات: 0)</span>
+          <button onclick="openModal('calibrateModal')" class="text-amber-400 underline">معايرة الطبعة (ص1/ص100)</button>
+        </div>
+      </div>
+
+      <!-- زر المايكروفون الكبير والتصوير السريع -->
+      <div class="card-bg rounded-2xl p-5 text-center space-y-4">
+        <p id="voiceStatusText" class="text-xs text-slate-300">الكتاب الورقي بيدك يا بوعلي.. اضغط المايكروفون وقول رقم الصفحة أو سؤالك أو انتقادك</p>
+
+        <div class="flex items-center justify-center gap-5">
+          <button id="micButton" onclick="toggleVoiceRecording()" class="w-20 h-20 rounded-full gold-grad text-slate-950 flex items-center justify-center text-3xl shadow-xl transition-transform active:scale-95">
+            🎙️
+          </button>
+          <label class="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 text-amber-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-700 shadow" title="تصوير صفحة من كتاب قديم">
+            <span class="text-lg">📷</span>
+            <span class="text-[9px]">تصوير صفحة</span>
+            <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handleSnapPage(event)" />
+          </label>
+        </div>
+
+        <button onclick="toggleContinuous()" id="contBtn" class="text-[11px] bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-xl font-bold">🔁 المحادثة المستمرة: متوقفة</button>
+
+        <!-- معاينة الصفحة المصورة إن وجدت -->
+        <div id="snappedPagePreview" class="hidden bg-slate-900/90 p-2.5 rounded-xl border border-amber-500/40 flex items-center justify-between text-xs">
+          <span class="text-emerald-400">📸 تم إرفاق صورة الصفحة للنقاش مع Claude</span>
+          <button onclick="clearSnappedPage()" class="text-rose-400">إلغاء ✕</button>
+        </div>
+
+        <!-- إدخال نصي أو صوتي مباشر -->
+        <div class="flex gap-2 pt-1">
+          <input id="userPromptInput" type="text" placeholder="أو اكتب مداخلتك هنا (مثلاً: أنا بصفحة 25 شنو يقصد الكاتب...)" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500" />
+          <button onclick="sendDiscussion()" id="sendBtn" class="gold-grad text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs shrink-0">إرسال</button>
+        </div>
+
+        <div class="flex gap-2 justify-center text-[11px]">
+          <span class="text-slate-400">تصنيف التسجيل:</span>
+          <label class="flex items-center gap-1 text-amber-300 cursor-pointer"><input type="radio" name="entryType" value="discussion" checked /> نقاش صوتي</label>
+          <label class="flex items-center gap-1 text-emerald-300 cursor-pointer"><input type="radio" name="entryType" value="critique" /> ملاحظة / انتقاد</label>
+        </div>
+      </div>
+
+      <!-- بطاقة رد Claude الفورية -->
+      <div id="latestResponseCard" class="card-bg rounded-2xl p-4 space-y-3 border-r-4 border-r-amber-500">
+        <div class="flex items-center justify-between gap-2">
+          <span id="latestTopicBadge" class="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg truncate">بانتظار أول نقاش</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="toggleAutoSpeak()" id="autoSpeakBtn" class="text-xs bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-lg font-medium">🔊 الرد صوتي</button>
+            <button onclick="stopSpeaking()" class="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded-lg">⏹</button>
+          </div>
+        </div>
+        <div id="chatThread" class="space-y-3 max-h-[55vh] overflow-y-auto"></div>
+      </div>
+    </section>
+
+    <!-- 3. التبويب الثالث: أرشيف المناقشات والملاحظات وملف الكتاب -->
+    <section id="tab-archive" class="hidden space-y-4">
+      <div class="card-bg rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-sm text-amber-400">🗂️ قائمة مناقشات وملاحظات علي المتروك</h3>
+          <div class="flex gap-1.5">
+            <button onclick="exportArchive()" class="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-2.5 py-1.5 rounded-xl font-bold">⬇ MD</button>
+            <button onclick="exportDocx()" class="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-2.5 py-1.5 rounded-xl font-bold">⬇ Word</button>
+            <button onclick="readAllBookArchive()" class="text-xs bg-amber-500/20 text-amber-300 px-2.5 py-1.5 rounded-xl font-bold">🔊 قراءة الكل</button>
+          </div>
+        </div>
+        <select id="archiveScope" onchange="renderArchive()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-300">
+          <option value="current">الكتاب الحالي فقط</option>
+          <option value="all">كل كتبي</option>
+        </select>
+        <div class="flex gap-2">
+          <input id="archiveSearch" oninput="renderArchive()" type="text" placeholder="ابحث برقم الصفحة أو الموضوع..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+          <select id="archiveFilter" onchange="renderArchive()" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-slate-300">
+            <option value="all">الكل</option>
+            <option value="discussion">نقاشات</option>
+            <option value="critique">انتقاداتي</option>
+            <option value="insight">أفكار واقتباسات</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="archiveList" class="space-y-3"></div>
+
+      <!-- ملخص الكتاب والكتب المشابهة -->
+      <div class="card-bg rounded-2xl p-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-amber-400">📖 ملخص الكتاب والكتب المشابهة المقترحة</h4>
+        </div>
+        <p id="bookHubSummary" class="text-xs text-slate-300 leading-relaxed"></p>
+        <button onclick="generateBookHubSummary()" id="hubBtn" class="text-[11px] bg-amber-500/20 text-amber-300 px-3 py-1.5 rounded-lg font-bold">✨ حدّث الملخص والكتب المشابهة بـ Claude</button>
+        <div class="pt-2 border-t border-slate-800">
+          <span class="text-[11px] text-amber-300 font-bold">كتب مشابهة مقترحة لك:</span>
+          <p id="bookHubSimilar" class="text-xs text-slate-400 mt-1"></p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- الشريط السفلي (3 أزرار رئيسية فقط) -->
+  <nav class="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur border-t border-slate-800 px-2 py-2.5 flex justify-around max-w-lg mx-auto">
+    <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-amber-400 font-bold text-[11px]"><span class="text-lg">🏠</span><span>الرئيسية</span></button>
+    <button onclick="switchTab('library')" id="nav-library" class="flex flex-col items-center gap-1 text-slate-400 font-medium text-[11px]"><span class="text-lg">📚</span><span>مكتبتي</span></button>
+    <button onclick="switchTab('discuss')" id="nav-discuss" class="flex flex-col items-center gap-1 text-slate-400 font-medium text-[11px]"><span class="text-lg">🎙️</span><span>النقاش</span></button>
+    <button onclick="switchTab('archive')" id="nav-archive" class="flex flex-col items-center gap-1 text-slate-400 font-medium text-[11px]"><span class="text-lg">🗂️</span><span>الأرشيف</span></button>
+  </nav>
+
+  <!-- نافذة إضافة كتاب (تصوير الغلاف أمام وخلف + بحث بالإنترنت + رفع PDF + معايرة الطبعة) -->
+  <div id="addBookModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-amber-400 text-base">📚 إضافة كتاب جديد لمكتبة علي المتروك</h3>
+        <button onclick="closeModal('addBookModal')" class="text-slate-400 text-lg">✕</button>
+      </div>
+
+      <!-- الخيار أ: تصوير الغلاف الأمامي والخلفي بالكاميرا (ويقرأ Claude البيانات تلقائياً) -->
+      <div class="bg-slate-800/80 p-3.5 rounded-xl border border-amber-500/40 space-y-2.5">
+        <label class="text-xs font-bold text-amber-300 block">📸 1. صوّر غلاف الكتاب (من الأمام والخلف):</label>
+        <div class="grid grid-cols-2 gap-2.5">
+          <label class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-900 border border-dashed border-amber-500/50 cursor-pointer hover:bg-slate-800 text-center">
+            <img id="frontCoverPreview" class="hidden w-16 h-22 object-cover rounded-lg mb-1 border border-amber-400" />
+            <span id="frontCoverIcon" class="text-xl">📕</span>
+            <span class="text-[11px] font-bold text-amber-300 mt-1">تصوير الغلاف الأمامي</span>
+            <input type="file" accept="image/*" class="hidden" onchange="handleCoverPhoto(event, 'front')" />
+          </label>
+          <label class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-900 border border-dashed border-slate-600 cursor-pointer hover:bg-slate-800 text-center">
+            <img id="backCoverPreview" class="hidden w-16 h-22 object-cover rounded-lg mb-1 border border-emerald-400" />
+            <span id="backCoverIcon" class="text-xl">📗</span>
+            <span class="text-[11px] font-bold text-slate-300 mt-1">تصوير الغلاف الخلفي</span>
+            <input type="file" accept="image/*" class="hidden" onchange="handleCoverPhoto(event, 'back')" />
+          </label>
+        </div>
+        <p id="coverAiStatus" class="text-[11px] text-emerald-400"></p>
+      </div>
+
+      <!-- الخيار ب: بحث تلقائي بالإنترنت -->
+      <div class="bg-slate-800/70 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
+        <label class="text-xs font-bold text-amber-300 block">🔍 2. أو ابحث عن الكتاب بالإنترنت تلقائياً:</label>
+        <div class="flex gap-2">
+          <input id="webSearchQuery" type="text" placeholder="اكتب اسم الكتاب..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+          <button onclick="searchBookOnline()" class="gold-grad text-slate-950 font-bold px-3 py-2 rounded-lg text-xs">بحث</button>
+        </div>
+        <div id="webSearchResults" class="space-y-2 max-h-48 overflow-y-auto"></div>
+      </div>
+
+      <!-- البحث عن نسخة رقمية -->
+      <div class="bg-slate-800/70 p-3.5 rounded-xl border border-emerald-600/40 space-y-2">
+        <label class="text-xs font-bold text-emerald-400 block">📥 3. نسخة رقمية للنقاش (تُجلب تلقائيًا إن وُجدت):</label>
+        <button onclick="findCopyForNew()" class="w-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg py-2 text-xs font-bold">🔎 ابحث عن نسخة رقمية باسم الكتاب</button>
+        <p class="text-[11px] text-slate-400">يبحث في أرشيف الإنترنت (Internet Archive) عن النسخ المتاحة للتحميل الحر. الكتب الحديثة المحمية بحقوق النشر غالبًا لن توجد، وعندها ارفع نسختك بالأسفل.</p>
+        <div id="copyResultsNew" class="space-y-1.5 max-h-56 overflow-y-auto"></div>
+      </div>
+
+      <!-- الخيار ج: بيانات الكتاب ورفع ملف الـ PDF -->
+      <div class="bg-slate-800/70 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
+        <label class="text-xs font-bold text-emerald-400 block">📄 4. بيانات الكتاب ونسختك الخاصة (إن لم تُوجد نسخة تلقائية):</label>
+        <input id="newBookTitle" type="text" placeholder="عنوان الكتاب *" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        <div class="grid grid-cols-2 gap-2">
+          <input id="newBookAuthor" type="text" placeholder="المؤلف" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+          <input id="newBookPublisher" type="text" placeholder="دار النشر (مثل: دار صادر)" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        </div>
+        <textarea id="newBookBackSummary" rows="2" placeholder="نبذة الغلاف الخلفي أو موضوع الكتاب (تُملأ تلقائياً أو يدوياً)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
+        <div>
+          <label class="text-[11px] text-slate-300 block mb-1">أو ارفع نسختك الخاصة (PDF أو EPUB أو Word docx أو نص):</label>
+          <input type="file" accept=".pdf,.txt,.md,.epub,.docx" onchange="handlePdfUpload(event)" class="w-full text-xs text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500/20 file:text-amber-300" />
+          <p id="pdfUploadStatus" class="text-[11px] text-emerald-400 mt-1"></p>
+        </div>
+      </div>
+
+      <!-- معايرة الصفحات ص1 و ص100 -->
+      <div class="bg-slate-800/70 p-3.5 rounded-xl border border-slate-700 space-y-2">
+        <label class="text-xs font-bold text-amber-300 block">⚖️ مزامنة الطبعة الورقية (اختياري):</label>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="newBookOffset" type="number" value="0" placeholder="فرق الصفحات (مثلاً 0)" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+          <p class="text-[11px] text-slate-400 self-center">رقم الورقي + الفرق = رقم الصفحة في الـ PDF</p>
+        </div>
+      </div>
+
+      <button onclick="saveNewBook()" id="saveBookBtn" class="w-full gold-grad text-slate-950 font-bold py-3 rounded-xl text-sm shadow-lg">✓ حفظ الكتاب في مكتبتي والبدء</button>
+    </div>
+  </div>
+
+  <!-- نافذة الملخص الأسبوعي -->
+  <div id="weeklyModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-3 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-amber-400 text-base">📅 ملخصي الأسبوعي</h3>
+        <button onclick="closeModal('weeklyModal'); stopSpeaking()" class="text-slate-400 text-lg">✕</button>
+      </div>
+      <p id="weeklyText" class="text-sm text-slate-100 leading-relaxed whitespace-pre-line">...</p>
+      <div class="flex gap-2">
+        <button onclick="speakText(document.getElementById('weeklyText').innerText)" class="flex-1 bg-amber-500/20 text-amber-300 py-2 rounded-xl text-xs font-bold">🔊 استمع</button>
+        <button onclick="stopSpeaking()" class="bg-slate-800 text-slate-300 px-4 rounded-xl text-xs">⏹</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة تعديل كتاب -->
+  <div id="editBookModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-3 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-amber-400 text-base">✏️ تعديل الكتاب</h3>
+        <button onclick="closeModal('editBookModal')" class="text-slate-400 text-lg">✕</button>
+      </div>
+      <input type="hidden" id="editBookId" />
+      <input id="editTitle" type="text" placeholder="العنوان *" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+      <div class="grid grid-cols-2 gap-2">
+        <input id="editAuthor" type="text" placeholder="المؤلف" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        <input id="editPublisher" type="text" placeholder="دار النشر" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+      </div>
+      <textarea id="editSummary" rows="3" placeholder="نبذة / ملخص" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"></textarea>
+      <div class="grid grid-cols-2 gap-2 items-center">
+        <label class="text-[11px] text-slate-300">فرق الصفحات (ورقي → إلكتروني)</label>
+        <input id="editOffset" type="number" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+      </div>
+      <div class="grid grid-cols-2 gap-2 items-center">
+        <label class="text-[11px] text-slate-300">عدد صفحات كتابك الورقي</label>
+        <input id="editTotal" type="number" min="0" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+      </div>
+      <div class="flex items-center gap-3">
+        <img id="editCoverPreview" class="w-14 h-20 object-cover rounded-lg border border-slate-700 bg-slate-800" />
+        <label class="text-[11px] bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded-lg px-3 py-2 font-bold cursor-pointer">📸 تغيير الغلاف
+          <input type="file" accept="image/*" class="hidden" onchange="editCoverPhoto(event)" />
+        </label>
+      </div>
+      <button onclick="saveEditBook()" class="w-full gold-grad text-slate-950 font-bold py-2.5 rounded-xl text-sm">حفظ التعديلات ✓</button>
+    </div>
+  </div>
+
+  <!-- نافذة معايرة الصفحات السريعة -->
+  <div id="calibrateModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-amber-400 text-sm">⚖️ معايرة صفحات الطبعة الورقية</h3>
+        <button onclick="closeModal('calibrateModal')" class="text-slate-400">✕</button>
+      </div>
+      <p class="text-xs text-slate-300">إذا كانت صفحة 100 في كتابك الورقي تقابل صفحة أخرى في النسخة الإلكترونية، ضع رقم الصفحة المقابلة هنا ليتم ضبط كل الفصول تلقائياً:</p>
+      <div class="grid grid-cols-2 gap-2 items-center text-xs">
+        <span>صفحة 100 ورقياً تقابل إلكترونياً:</span>
+        <input id="calElectronicPage100" type="number" value="100" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-center text-amber-400 font-bold" />
+      </div>
+      <button onclick="applyCalibration()" class="w-full gold-grad text-slate-950 font-bold py-2.5 rounded-xl text-xs">حفظ المعايرة</button>
+    </div>
+  </div>
+
+  <!-- نافذة إعدادات حساب علي المتروك و Claude والصوت -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-amber-400 text-base">⚙️ الملف الشخصي وإعدادات Claude</h3>
+        <button onclick="closeModal('settingsModal')" class="text-slate-400 text-lg">✕</button>
+      </div>
+
+      <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-amber-300">👤 المالك: علي المتروك (@ali_almatrouk)</p>
+          <p class="text-[11px] text-slate-400">مرتبط بسحابة Firebase الخاصة: jalees-a0670</p>
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-slate-200">1. مفتاح Claude API (للنقاش وقراءة الأغلفة والتلخيص):</label>
+        <input id="claudeKeyInput" type="password" placeholder="sk-ant-..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+        <p class="text-[11px] text-slate-400">من console.anthropic.com. يُحفظ على جهازك فقط ولا يُرفع للسحابة.</p>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-slate-200">نموذج Claude للنقاش:</label>
+        <div class="flex gap-2">
+          <select id="claudeModelSelect" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200"></select>
+          <button onclick="refreshModels()" id="refreshModelsBtn" class="text-[11px] bg-amber-500/20 text-amber-300 px-3 rounded-xl font-bold shrink-0">↻ حدّث القائمة</button>
+        </div>
+        <p class="text-[11px] text-slate-400">زر «حدّث القائمة» يجلب كل النماذج المتاحة في حسابك. يمكنك تبديل النموذج أيضًا من شاشة النقاش.</p>
+      </div>
+
+      <div class="space-y-1.5 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+        <label class="text-xs font-bold text-slate-200">2. الصوت (قراءة الردود):</label>
+        <select id="voiceSelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200"></select>
+        <div class="flex items-center gap-2 text-[11px] text-slate-300">
+          <span>السرعة</span>
+          <input id="voiceRate" type="range" min="0.7" max="1.2" step="0.05" value="0.92" class="flex-1" />
+          <button onclick="testVoice()" class="bg-amber-500/20 text-amber-300 px-3 py-1 rounded-lg font-bold">🔊 جرّب</button>
+        </div>
+        <p class="text-[11px] text-slate-400">للحصول على أفضل صوت بلا مفتاح: اختر صوتًا عربيًا مميزًا بكلمة Enhanced أو Premium أو Natural أو Google أو Microsoft (يتوفر بعضها في Edge وSafari وتحميلها من إعدادات الجهاز). للصوت البشري الواقعي ضع مفتاح ElevenLabs:</p>
+        <input id="elevenKeyInput" type="password" placeholder="مفتاح ElevenLabs API (اختياري)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+        <input id="elevenVoiceIdInput" type="text" value="pNInz6obpgDQGcFmaJgB" placeholder="Voice ID" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 mt-1" />
+      </div>
+
+      <button onclick="saveSettings()" class="w-full gold-grad text-slate-950 font-bold py-3 rounded-xl text-sm">حفظ الإعدادات ✓</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    import Anthropic from "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.135.0/+esm";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCcRNbKaI_blwkQoq5NfXw_N2Pzc7NZp8s",
+      authDomain: "jalees-a0670.firebaseapp.com",
+      projectId: "jalees-a0670",
+      storageBucket: "jalees-a0670.firebasestorage.app",
+      messagingSenderId: "1069009143998",
+      appId: "1:1069009143998:web:de41e855d95e3484b336ef"
+    };
+
+    const LS_STATE = "jalees_ali_v4";
+    const CLOUD_LIMIT = 900 * 1024; // حد مستند Firestore ≈ 1MB
+
+    let db = null;
+    let authReady = Promise.resolve();
+    try {
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      db = getFirestore(app);
+      authReady = signInAnonymously(auth).catch((e) => { console.warn("Anonymous auth failed:", e); });
+    } catch (e) {
+      console.warn("Firebase fallback to local:", e);
+    }
+
+    // ───────── أدوات مساعدة ─────────
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
+    const $ = (id) => document.getElementById(id);
+    const arabicDigits = (s) => String(s).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+
+    function toast(msg) {
+      let t = $("toast");
+      if (!t) {
+        t = document.createElement("div");
+        t.id = "toast";
+        t.className = "fixed top-16 inset-x-4 z-[60] mx-auto max-w-sm text-center text-xs font-bold bg-slate-800 text-amber-300 border border-amber-500/40 rounded-xl px-4 py-3 shadow-xl transition-opacity";
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.style.opacity = "1";
+      clearTimeout(t._h);
+      t._h = setTimeout(() => { t.style.opacity = "0"; }, 3500);
+    }
+
+    // SVG غلاف عربي أنيق
+    const defaultArabicCover = "data:image/svg+xml;utf8," + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" viewBox="0 0 240 340">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1e293b"/>
+            <stop offset="100%" stop-color="#0f172a"/>
+          </linearGradient>
+        </defs>
+        <rect width="240" height="340" rx="16" fill="url(#g)" stroke="#f59e0b" stroke-width="4"/>
+        <rect x="18" y="18" width="204" height="304" rx="10" fill="none" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <text x="120" y="140" fill="#fbbf24" font-family="Tajawal, sans-serif" font-size="22" font-weight="bold" text-anchor="middle">مكتبة</text>
+        <text x="120" y="175" fill="#ffffff" font-family="Tajawal, sans-serif" font-size="24" font-weight="bold" text-anchor="middle">علي المتروك</text>
+        <text x="120" y="220" fill="#94a3b8" font-family="Tajawal, sans-serif" font-size="14" text-anchor="middle">جليس • Claude</text>
+      </svg>
+    `);
+
+    window.defaultArabicCover = defaultArabicCover;
+
+    const defaultState = {
+      ownerName: "علي المتروك",
+      username: "ali_almatrouk",
+      updatedAt: "",
+      currentBookId: "khaldun",
+      books: [
+        {
+          id: "khaldun",
+          title: "مقدمة ابن خلدون",
+          author: "عبد الرحمن بن خلدون",
+          publisher: "دار صادر",
+          cover: "",
+          backCover: "",
+          currentPage: 150,
+          pageOffset: 0,
+          summary: "يتناول الكتاب أسس العمران البشري، طبائع الدول وأطوارها، وأثر الجباية والاقتصاد في قيام الحضارات.",
+          similar: "• طبائع الاستبداد (الكواكبي) • شروط النهضة (مالك بن نبي)",
+          discussions: [
+            {
+              id: "d1",
+              page: 150,
+              topic: "الجباية وأثر زيادة الضرائب على العمران",
+              type: "discussion",
+              userText: "وصلت صفحة 150، شنو يقصد ابن خلدون بأن الجباية تقل لما تزيد الضرائب؟",
+              aiText: "يا هلا بوعلي. في صفحة مئة وخمسين، يوضح ابن خلدون أن الدولة حين ترفع المكوس والضرائب على التجار والزراع، تقل رغبتهم في العمل، فينكمش العمران وتنقص الجباية الكلية.",
+              date: "اليوم"
+            }
+          ]
+        }
+      ],
+      quotes: [
+        { text: "إن التاريخ في ظاهره لا يزيد عن الإخبار، وفي باطنه نظر وتحقيق وتعليل للكائنات ومبادئها دقيق.", book: "مقدمة ابن خلدون (ص 15)" },
+        { text: "الظلم مؤذن بخراب العمران، والعدل أساس بقاء الدول وازدهار الأسواق.", book: "مقدمة ابن خلدون (ص 162)" }
+      ]
+    };
+
+    function normalizeState(s) {
+      if (!s || typeof s !== "object") return structuredClone(defaultState);
+      if (!Array.isArray(s.books)) s.books = [];
+      if (!Array.isArray(s.quotes) || !s.quotes.length) s.quotes = structuredClone(defaultState.quotes);
+      if (!s.readLog || typeof s.readLog !== "object") s.readLog = {};
+      s.dailyGoal = parseInt(s.dailyGoal) || 10;
+      s.books.forEach(b => {
+        delete b.extractedPages; // نصوص الـ PDF تُحفظ الآن في IndexedDB وليس داخل الحالة
+        if (!Array.isArray(b.discussions)) b.discussions = [];
+        b.currentPage = parseInt(b.currentPage) || 1;
+        b.pageOffset = parseInt(b.pageOffset) || 0;
+      });
+      return s;
+    }
+
+    function loadLocalState() {
+      try {
+        const raw = lsGet(LS_STATE);
+        if (raw) return normalizeState(JSON.parse(raw));
+      } catch (e) { console.warn("corrupt local state", e); }
+      return normalizeState(structuredClone(defaultState));
+    }
+
+    let state = loadLocalState();
+    let snappedImageBase64 = null;
+    let tempPdfPages = {};
+    let tempFrontCover = "";
+    let tempBackCover = "";
+    let showingBackCover = false;
+    let webResults = [];
+    let quoteIdx = Math.floor(Math.random() * 1000);
+
+    // ───────── تخزين نصوص الكتب (IndexedDB) ─────────
+    const idb = {
+      _db: null,
+      open() {
+        if (this._db) return this._db;
+        this._db = new Promise((resolve, reject) => {
+          const req = indexedDB.open("jalees_pages", 1);
+          req.onupgradeneeded = () => req.result.createObjectStore("pages");
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        return this._db;
+      },
+      async get(id) {
+        try {
+          const d = await this.open();
+          return await new Promise((res, rej) => { const r = d.transaction("pages").objectStore("pages").get(id); r.onsuccess = () => res(r.result || {}); r.onerror = () => rej(r.error); });
+        } catch (e) { return {}; }
+      },
+      async set(id, val) {
+        try {
+          const d = await this.open();
+          await new Promise((res, rej) => { const t = d.transaction("pages", "readwrite"); t.objectStore("pages").put(val, id); t.oncomplete = res; t.onerror = () => rej(t.error); });
+          return true;
+        } catch (e) { return false; }
+      },
+      async del(id) {
+        try {
+          const d = await this.open();
+          await new Promise((res) => { const t = d.transaction("pages", "readwrite"); t.objectStore("pages").delete(id); t.oncomplete = res; t.onerror = res; });
+        } catch (e) {}
+      }
+    };
+
+    // ───────── المزامنة ─────────
+    function setCloudStatus(txt, cls) {
+      const el = $("cloudStatus");
+      el.innerText = txt;
+      el.className = `text-[11px] ${cls}`;
+    }
+
+    function cloudPayload() {
+      let json = JSON.stringify(state);
+      if (json.length > CLOUD_LIMIT) {
+        // تخفيف: إسقاط الأغلفة المضمّنة (data:) من النسخة السحابية فقط
+        const slim = structuredClone(state);
+        slim.books.forEach(b => {
+          if ((b.cover || "").startsWith("data:")) b.cover = "";
+          if ((b.backCover || "").startsWith("data:")) b.backCover = "";
+        });
+        json = JSON.stringify(slim);
+      }
+      return json;
+    }
+
+    async function syncToCloud() {
+      state.updatedAt = new Date().toISOString();
+      if (!lsSet(LS_STATE, JSON.stringify(state))) {
+        setCloudStatus("● الحساب: @ali_almatrouk • تعذّر الحفظ المحلي (المساحة ممتلئة)", "text-rose-400");
+      }
+      if (!db) { setCloudStatus("● الحساب: @ali_almatrouk • محفوظ محلياً", "text-amber-400"); return; }
+      try {
+        await authReady;
+        await setDoc(doc(db, "jalees_library", "ali_almatrouk_profile"), {
+          owner: "علي المتروك",
+          updatedAt: state.updatedAt,
+          stateData: cloudPayload()
+        });
+        setCloudStatus("● الحساب: @ali_almatrouk • محفوظ بالسحابة ✓", "text-emerald-400");
+      } catch (e) {
+        console.warn("cloud save failed", e);
+        setCloudStatus("● الحساب: @ali_almatrouk • محفوظ محلياً (السحابة غير متاحة)", "text-amber-400");
+      }
+    }
+
+    async function loadFromCloud() {
+      if (!db) { setCloudStatus("● الحساب: @ali_almatrouk • وضع محلي", "text-amber-400"); return; }
+      try {
+        await authReady;
+        const snap = await getDoc(doc(db, "jalees_library", "ali_almatrouk_profile"));
+        if (snap.exists() && snap.data().stateData) {
+          const cloud = normalizeState(JSON.parse(snap.data().stateData));
+          const cloudTime = Date.parse(snap.data().updatedAt || cloud.updatedAt || 0) || 0;
+          const localTime = Date.parse(state.updatedAt || 0) || 0;
+          if (cloudTime > localTime) {
+            // احتفظ بأغلفة الجهاز إذا أُسقطت من السحابة
+            cloud.books.forEach(cb => {
+              const lb = state.books.find(b => b.id === cb.id);
+              if (lb) { if (!cb.cover && lb.cover) cb.cover = lb.cover; if (!cb.backCover && lb.backCover) cb.backCover = lb.backCover; }
+            });
+            state = cloud;
+            lsSet(LS_STATE, JSON.stringify(state));
+            window.renderAll();
+          } else if (localTime > cloudTime) {
+            syncToCloud();
+            return;
+          }
+        } else {
+          syncToCloud();
+          return;
+        }
+        setCloudStatus("● الحساب: @ali_almatrouk • متصل بالسحابة ✓", "text-emerald-400");
+      } catch (e) {
+        console.warn("cloud load failed", e);
+        setCloudStatus("● الحساب: @ali_almatrouk • وضع محلي (تعذّر الاتصال بالسحابة)", "text-amber-400");
+      }
+    }
+    window.syncToCloud = syncToCloud;
+
+    function getCurrentBook() {
+      if (!state.books || !state.books.length) return null;
+      return state.books.find(b => b.id === state.currentBookId) || state.books[0];
+    }
+
+    // ───────── العرض ─────────
+    window.renderAll = function () {
+      const book = getCurrentBook();
+      const sel = $("bookSelector");
+
+      if (!book) {
+        sel.innerHTML = `<option value="">لا توجد كتب حالياً</option>`;
+        $("emptyLibraryBox").classList.remove("hidden");
+        $("activeBookBox").classList.add("hidden");
+        $("discussBookTitle").innerText = "لا يوجد كتاب محدد";
+        window.renderArchive();
+        window.renderLibrary();
+        renderThread();
+        return;
+      }
+      state.currentBookId = book.id;
+
+      $("emptyLibraryBox").classList.add("hidden");
+      $("activeBookBox").classList.remove("hidden");
+
+      sel.innerHTML = state.books.map(b => `<option value="${esc(b.id)}" ${b.id === book.id ? "selected" : ""}>${esc(b.title)}</option>`).join("");
+
+      $("currentBookTitle").innerText = book.title;
+      $("currentBookAuthor").innerHTML = `${esc(book.author)} • <span class="text-amber-400">${esc(book.publisher || "طبعة خاصة")}</span>`;
+      const activeCover = (showingBackCover && book.backCover) ? book.backCover : (book.cover || defaultArabicCover);
+      const img = $("currentBookCover");
+      img.onerror = () => { img.onerror = null; img.src = defaultArabicCover; };
+      img.src = activeCover;
+      $("flipCoverBtn").classList.toggle("hidden", !book.backCover);
+      $("flipCoverBtn").innerText = showingBackCover ? "🔄 اقلب للأمام" : "🔄 اقلب للخلف";
+
+      $("homeCurrentPage").innerText = book.currentPage;
+      $("discussBookTitle").innerText = `${book.title} (${book.publisher || "طبعة ورقية"})`;
+      $("paperPageInput").value = book.currentPage;
+      $("mappedPageInfo").innerText = `الطبعة الورقية متزامنة (فرق الصفحات: ${book.pageOffset || 0})`;
+      $("calElectronicPage100").value = 100 + (book.pageOffset || 0);
+      $("bookHubSummary").innerText = book.summary || "أضف مناقشات ليقوم Claude بتوليد ملخص شامل لكتابك.";
+      $("bookHubSimilar").innerText = book.similar || "• سيتم اقتراح كتب مشابهة بناءً على نقاشاتك.";
+      renderBookSyncBadge(book);
+      window.renderArchive();
+      window.renderLibrary();
+      renderThread();
+      renderStats();
+    };
+
+    async function renderBookSyncBadge(book) {
+      const badge = $("bookSyncBadge");
+      const pages = await idb.get(book.id);
+      const n = Object.keys(pages).length;
+      if (getCurrentBook()?.id !== book.id) return;
+      $("removeFileBtn").classList.toggle("hidden", !n);
+      if (n) {
+        const label = n === 1 ? "ملف نصي" : `${n} ${book.fileApprox ? "جزء تقريبي" : "صفحة"}`;
+        badge.innerText = `✓ النسخة الإلكترونية جاهزة (${label})`;
+        badge.className = "text-[11px] text-emerald-400 bg-emerald-950/50 border border-emerald-800/50 px-2 py-0.5 rounded-md inline-block";
+        $("bookFileInfo").innerText = `📄 الملف المرفق: ${book.fileName || "ملف الكتاب"} — يُحفظ على هذا الجهاز فقط`;
+      } else {
+        badge.innerText = "لا توجد نسخة PDF على هذا الجهاز (النقاش بدون نص الصفحة)";
+        badge.className = "text-[11px] text-slate-400 bg-slate-800/60 border border-slate-700 px-2 py-0.5 rounded-md inline-block";
+        $("bookFileInfo").innerText = "📄 لا يوجد ملف مرفق لهذا الكتاب. أضف PDF ليقرأ Claude نص الصفحة التي تناقشها.";
+      }
+    }
+
+    window.nextQuote = function () {
+      const q = state.quotes || [];
+      if (!q.length) return;
+      quoteIdx = (quoteIdx + 1) % q.length;
+      showQuote();
+    };
+    function showQuote() {
+      const q = state.quotes || [];
+      if (!q.length) return;
+      const item = q[quoteIdx % q.length];
+      $("dailyQuoteText").innerText = `"${item.text}"`;
+      $("dailyQuoteBook").innerText = `— ${item.book || "من قراءاتك وملاحظاتك المحفوظة"}`;
+    }
+
+    window.addQuote = function () {
+      const text = prompt("اكتب الاقتباس:");
+      if (!text || !text.trim()) return;
+      const book = getCurrentBook();
+      const where = prompt("المصدر (اتركه كما هو أو عدّله):", book ? book.title : "") || "";
+      state.quotes.push({ text: text.trim(), book: where.trim() });
+      quoteIdx = state.quotes.length - 1;
+      showQuote();
+      syncToCloud();
+    };
+    window.deleteQuote = function () {
+      const q = state.quotes || [];
+      if (q.length <= 1) { toast("يبقى اقتباس واحد على الأقل."); return; }
+      if (!confirm("حذف هذا الاقتباس؟")) return;
+      q.splice(quoteIdx % q.length, 1);
+      quoteIdx = 0;
+      showQuote();
+      syncToCloud();
+    };
+
+    async function makeQuoteCard(text, source) {
+      try { await document.fonts.load("700 56px Tajawal"); } catch (e) {}
+      const W = 1080, H = 1350;
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      const g = c.getContext("2d");
+      const bg = g.createLinearGradient(0, 0, W, H);
+      bg.addColorStop(0, "#0b1120"); bg.addColorStop(1, "#1e293b");
+      g.fillStyle = bg; g.fillRect(0, 0, W, H);
+      g.strokeStyle = "#d97706"; g.lineWidth = 3; g.strokeRect(48, 48, W - 96, H - 96);
+      g.direction = "rtl"; g.textAlign = "center";
+      g.fillStyle = "#f59e0b"; g.font = "800 220px Tajawal"; g.fillText("❝", W / 2, 330);
+      // التفاف النص
+      let size = 56;
+      let lines;
+      for (;;) {
+        g.font = `700 ${size}px Tajawal`;
+        lines = []; let cur = "";
+        for (const w of text.split(/\s+/)) {
+          const t = cur ? cur + " " + w : w;
+          if (g.measureText(t).width > W - 220 && cur) { lines.push(cur); cur = w; } else cur = t;
+        }
+        if (cur) lines.push(cur);
+        if (lines.length * size * 1.7 <= 640 || size <= 34) break;
+        size -= 4;
+      }
+      g.fillStyle = "#f8fafc";
+      const lh = size * 1.7;
+      let y = 470 + (640 - lines.length * lh) / 2;
+      lines.forEach(l => { g.fillText(l, W / 2, y); y += lh; });
+      g.fillStyle = "#fbbf24"; g.font = "500 40px Tajawal";
+      g.fillText("— " + (source || ""), W / 2, 1180);
+      g.fillStyle = "#94a3b8"; g.font = "500 32px Tajawal";
+      g.fillText("جليس • مكتبة علي المتروك", W / 2, 1255);
+      return await new Promise(r => c.toBlob(r, "image/png"));
+    }
+
+    window.shareQuoteCard = async function () {
+      const q = state.quotes[quoteIdx % state.quotes.length];
+      if (!q) return;
+      const blob = await makeQuoteCard(q.text, q.book);
+      const file = new File([blob], "jalees-quote.png", { type: "image/png" });
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: q.text }); return; }
+      } catch (e) { if (e.name === "AbortError") return; }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "jalees-quote.png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+      toast("تم تنزيل بطاقة الاقتباس");
+    };
+
+    window.toggleCoverSide = function () {
+      const book = getCurrentBook();
+      if (!book || !book.backCover) return;
+      showingBackCover = !showingBackCover;
+      window.renderAll();
+    };
+
+    window.deleteCurrentBook = function () {
+      const book = getCurrentBook();
+      if (book) return window.deleteBookById(book.id);
+    };
+
+    window.selectBook = function (id) {
+      if (!id) return;
+      state.currentBookId = id;
+      showingBackCover = false;
+      window.renderAll();
+      syncToCloud();
+    };
+
+    window.switchTab = function (tab) {
+      ["home", "library", "discuss", "archive"].forEach(t => {
+        $(`tab-${t}`).classList.toggle("hidden", t !== tab);
+        $(`nav-${t}`).className = t === tab ? "flex flex-col items-center gap-1 text-amber-400 font-bold text-[11px]" : "flex flex-col items-center gap-1 text-slate-400 font-medium text-[11px]";
+      });
+      if (tab === "library") window.renderLibrary();
+      window.scrollTo({ top: 0 });
+    };
+
+    window.changePage = function (delta) {
+      const book = getCurrentBook();
+      if (!book) return;
+      book.currentPage = Math.max(1, (parseInt(book.currentPage) || 1) + delta);
+      logReading(delta);
+      window.renderAll();
+      syncToCloud();
+    };
+
+    window.updatePage = function (val) {
+      const book = getCurrentBook();
+      if (!book) return;
+      const prev = parseInt(book.currentPage) || 1;
+      book.currentPage = Math.max(1, parseInt(arabicDigits(val)) || 1);
+      logReading(book.currentPage - prev);
+      window.renderAll();
+      syncToCloud();
+    };
+
+    window.applyCalibration = function () {
+      const book = getCurrentBook();
+      if (!book) return;
+      const elec100 = parseInt($("calElectronicPage100").value);
+      book.pageOffset = (isNaN(elec100) ? 100 : elec100) - 100;
+      window.closeModal("calibrateModal");
+      window.renderAll();
+      syncToCloud();
+      toast(`تمت المعايرة: فرق الصفحات ${book.pageOffset}`);
+    };
+
+    // ───────── الصوت ─────────
+    function prepareSpeech(text) {
+      return String(text || "")
+        .replace(/https?:\/\/\S+/g, " ")
+        .replace(/(?:^|\s)ص\s*(\d+)/g, " صفحة $1")
+        .replace(/[*#_~`>|•●▪◦\-–—]{1,}\s/g, " ")
+        .replace(/[*#_~`]/g, "")
+        .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
+        .replace(/\(([^)]{0,40})\)/g, "، $1،")
+        .replace(/\s*\n+\s*/g, ". ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+    }
+
+    // يقسّم عند نهايات الجمل ثم عند الفواصل، ليقرأ بنفس إيقاع القارئ لا بنفَس واحد طويل
+    function splitForSpeech(text, max = 170) {
+      const sentences = text.split(/(?<=[.!؟?؛:])\s+/).filter(Boolean);
+      const out = [];
+      for (const sen of sentences) {
+        if (sen.length <= max) { out.push(sen); continue; }
+        let cur = "";
+        for (const part of sen.split(/(?<=[،,])\s+/)) {
+          if ((cur + " " + part).trim().length > max && cur) { out.push(cur.trim()); cur = part; }
+          else cur = (cur + " " + part).trim();
+        }
+        if (cur) out.push(cur.trim());
+      }
+      return out;
+    }
+
+    let speechToken = 0;
+    function arabicVoices() {
+      if (!("speechSynthesis" in window)) return [];
+      return window.speechSynthesis.getVoices().filter(v => /^ar/i.test(v.lang));
+    }
+    function voiceScore(v) {
+      let sc = 0;
+      if (/premium|enhanced|natural|neural|online/i.test(v.name)) sc += 6;
+      if (/Microsoft.*(Hamed|Zariyah|Salma|Shakir|Laila|Maged)/i.test(v.name)) sc += 6;
+      if (/Google/i.test(v.name)) sc += 3;
+      if (/Majed|Maged|Tarik|Hamed|Shakir/i.test(v.name)) sc += 2;
+      if (/ar[-_]SA/i.test(v.lang)) sc += 1;
+      return sc;
+    }
+    function pickArabicVoice() {
+      const list = arabicVoices();
+      const saved = lsGet("jalees_voice_name");
+      return list.find(v => v.name === saved) || list.sort((a, b) => voiceScore(b) - voiceScore(a))[0] || null;
+    }
+    function populateVoices() {
+      const sel = $("voiceSelect");
+      if (!sel) return;
+      const list = arabicVoices().sort((a, b) => voiceScore(b) - voiceScore(a));
+      const saved = lsGet("jalees_voice_name") || "";
+      sel.innerHTML = `<option value="">تلقائي (الأفضل المتاح)</option>` +
+        list.map(v => `<option value="${esc(v.name)}" ${v.name === saved ? "selected" : ""}>${esc(v.name)} (${esc(v.lang)})</option>`).join("");
+      if (!list.length) sel.innerHTML = `<option value="">لا توجد أصوات عربية في هذا الجهاز</option>`;
+    }
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.addEventListener?.("voiceschanged", populateVoices);
+      window.speechSynthesis.getVoices();
+    }
+
+    window.testVoice = function () {
+      lsSet("jalees_voice_name", $("voiceSelect").value);
+      lsSet("jalees_voice_rate", $("voiceRate").value);
+      window.speakText("يا هلا بوعلي. هذا صوت القراءة، وأتمنى أن يكون واضحًا ومريحًا لك. في صفحة مئة وخمسين، يوضح ابن خلدون أن الظلم مؤذن بخراب العمران.", { forceLocal: true });
+    };
+
+    window.speakText = async function (rawText, opts = {}) {
+      window.stopSpeaking();
+      const myToken = ++speechToken;
+      const cleanText = prepareSpeech(rawText);
+      if (!cleanText) return;
+      const elevenKey = opts.forceLocal ? "" : lsGet("jalees_eleven_key");
+      const voiceId = lsGet("jalees_eleven_voice") || "pNInz6obpgDQGcFmaJgB";
+
+      if (elevenKey) {
+        try {
+          const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
+            method: "POST",
+            headers: { "xi-api-key": elevenKey, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text: cleanText.slice(0, 2500),
+              model_id: "eleven_multilingual_v2",
+              voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.25, use_speaker_boost: true }
+            })
+          });
+          if (myToken !== speechToken) return;
+          if (res.ok) {
+            const audio = new Audio(URL.createObjectURL(await res.blob()));
+            window.currentAudio = audio;
+            await audio.play();
+            await new Promise(r => { audio.onended = r; audio.onerror = r; });
+            return;
+          }
+          toast("تعذّر صوت ElevenLabs، سيُستخدم صوت الجهاز.");
+        } catch (e) { console.warn("elevenlabs failed", e); }
+      }
+
+      if (!("speechSynthesis" in window)) return;
+      const voice = pickArabicVoice();
+      const rate = parseFloat(lsGet("jalees_voice_rate")) || 0.92;
+      const chunks = splitForSpeech(cleanText);
+      await new Promise((resolve) => {
+        let i = 0;
+        const next = () => {
+          if (myToken !== speechToken || i >= chunks.length) { resolve(); return; }
+          const u = new SpeechSynthesisUtterance(chunks[i++]);
+          u.lang = voice?.lang || "ar-SA";
+          if (voice) u.voice = voice;
+          u.rate = rate;
+          u.pitch = 1;
+          u.onend = () => setTimeout(next, 120); // وقفة قصيرة بين الجمل
+          u.onerror = () => resolve();
+          window.speechSynthesis.speak(u);
+        };
+        next();
+      });
+    };
+
+    window.stopSpeaking = function () {
+      speechToken++;
+      if (window.currentAudio) { try { window.currentAudio.pause(); } catch (e) {} window.currentAudio = null; }
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    };
+
+    // فتح قفل الصوت في iOS/Safari عند أول لمسة
+    document.addEventListener("click", () => {
+      if ("speechSynthesis" in window && !window._ttsUnlocked) {
+        window._ttsUnlocked = true;
+        const u = new SpeechSynthesisUtterance(" ");
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+      }
+    }, { once: true });
+
+    window.whereWereWe = function () {
+      const book = getCurrentBook();
+      if (!book) return;
+      const last = book.discussions && book.discussions.length > 0 ? book.discussions[0] : null;
+      const msg = last
+        ? `يا هلا يا علي، في كتاب ${book.title}، آخر مرة وصلنا عند صفحة ${book.currentPage}، وكنا نتناقش في موضوع ${last.topic}. تحب نكمل من هنا؟`
+        : `يا هلا يا علي، نحن الآن في كتاب ${book.title} عند صفحة ${book.currentPage}. اضغط المايكروفون وقل لي ما الفكرة التي استوقفتك.`;
+      window.speakText(msg);
+    };
+
+    // ───────── Claude ─────────
+    const BASE_MODELS = [
+      { id: "claude-opus-5-5", name: "Claude Opus 5.5 — الأقوى (افتراضي)" },
+      { id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5 — أسرع" },
+      { id: "claude-haiku-5-5", name: "Claude Haiku 5.5 — الأسرع والأرخص" },
+      { id: "claude-fable-5-1", name: "Claude Fable 5.1 — الأعمق" },
+      { id: "claude-opus-5", name: "Claude Opus 5" },
+      { id: "claude-sonnet-5", name: "Claude Sonnet 5" }
+    ];
+    const FALLBACK_MODELS = new Set(["claude-opus-5-5", "claude-fable-5-1", "claude-opus-5", "claude-sonnet-5-5"]);
+
+    function allModels() {
+      let extra = [];
+      try { extra = JSON.parse(lsGet("jalees_models_cache") || "[]"); } catch (e) {}
+      const seen = new Set(BASE_MODELS.map(m => m.id));
+      return [...BASE_MODELS, ...extra.filter(m => !seen.has(m.id))];
+    }
+    const getModel = () => lsGet("jalees_claude_model") || "claude-opus-5-5";
+
+    function populateModelSelects() {
+      const cur = getModel();
+      const html = allModels().map(m => `<option value="${esc(m.id)}" ${m.id === cur ? "selected" : ""}>${esc(m.name)}</option>`).join("");
+      ["claudeModelSelect", "quickModelSelect"].forEach(id => { if ($(id)) $(id).innerHTML = html; });
+    }
+    window.setModel = function (id) {
+      if (!id) return;
+      lsSet("jalees_claude_model", id);
+      populateModelSelects();
+      toast("النموذج الحالي: " + (allModels().find(m => m.id === id)?.name || id));
+    };
+
+    let _client = null, _clientKey = "";
+    function getClient() {
+      const key = lsGet("jalees_claude_key");
+      if (!key) throw new Error("NO_KEY");
+      if (!_client || _clientKey !== key) {
+        _client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
+        _clientKey = key;
+      }
+      return _client;
+    }
+
+    window.refreshModels = async function () {
+      const btn = $("refreshModelsBtn");
+      btn.disabled = true;
+      try {
+        // استخدم المفتاح المكتوب حاليًا في الخانة إن لم يُحفظ بعد
+        const typed = $("claudeKeyInput").value.trim();
+        if (typed) lsSet("jalees_claude_key", typed);
+        const list = [];
+        for await (const m of getClient().models.list()) list.push({ id: m.id, name: m.display_name || m.id });
+        lsSet("jalees_models_cache", JSON.stringify(list));
+        populateModelSelects();
+        toast(`✓ تم جلب ${list.length} نموذجًا من حسابك`);
+      } catch (e) {
+        toast(e.message === "NO_KEY" ? "اكتب مفتاح Claude أولاً" : "تعذّر جلب القائمة: " + explainError(e));
+      } finally { btn.disabled = false; }
+    };
+
+    function explainError(e) {
+      if (e?.message === "NO_KEY") return "NO_KEY";
+      const st = e?.status;
+      if (st === 401) return "مفتاح Claude غير صحيح";
+      if (st === 403) return "المفتاح لا يملك صلاحية لهذا النموذج";
+      if (st === 404) return "النموذج غير متاح في حسابك، اختر نموذجًا آخر";
+      if (st === 429) return "تجاوزت حد الاستخدام مؤقتًا، حاول بعد قليل";
+      if (st === 529 || st >= 500) return "خدمة Claude مشغولة الآن، حاول مرة ثانية";
+      if (st === 400 && /credit|balance/i.test(e.message)) return "رصيد حساب Anthropic غير كافٍ";
+      return e?.message || "خطأ غير معروف";
+    }
+
+    // content: نص أو مصفوفة كتل (نص/صورة). يعيد نص الرد.
+    async function callClaude(content, { system, maxTokens = 8000, history = [] } = {}) {
+      const client = getClient();
+      const model = getModel();
+      const params = { model, max_tokens: maxTokens, messages: [...history, { role: "user", content }] };
+      if (system) params.system = system;
+      let res;
+      try {
+        res = FALLBACK_MODELS.has(model)
+          ? await client.beta.messages.create({ ...params, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" })
+          : await client.messages.create(params);
+      } catch (e) {
+        if (FALLBACK_MODELS.has(model) && e?.status === 400) res = await client.messages.create(params); // الحساب لا يدعم التراجع التلقائي
+        else throw e;
+      }
+      if (res.stop_reason === "refusal") throw new Error("رفض Claude هذا الطلب");
+      const text = (res.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+      if (!text) throw new Error("رد فارغ");
+      return text;
+    }
+    const imageBlock = (b64) => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } });
+
+    // ───────── الصور ─────────
+    function compressImage(file, maxW = 500, quality = 0.75) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error);
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onerror = () => reject(new Error("تعذّر قراءة الصورة"));
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const scale = Math.min(1, maxW / img.width);
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    window.handleCoverPhoto = async function (e, side) {
+      const input = e.target;
+      const file = input.files[0];
+      if (!file) return;
+      const status = $("coverAiStatus");
+      let thumb, forAi;
+      try {
+        thumb = await compressImage(file, 360, 0.7);
+        forAi = (await compressImage(file, 1100, 0.85)).split(",")[1];
+      } catch (err) {
+        status.innerText = "⚠️ تعذّر قراءة الصورة، جرّب صورة أخرى.";
+        input.value = "";
+        return;
+      }
+      input.value = "";
+
+      if (side === "front") {
+        tempFrontCover = thumb;
+        $("frontCoverPreview").src = thumb;
+        $("frontCoverPreview").classList.remove("hidden");
+        $("frontCoverIcon").classList.add("hidden");
+        status.innerText = "📸 تم التقاط الغلاف الأمامي بنجاح.";
+      } else {
+        tempBackCover = thumb;
+        $("backCoverPreview").src = thumb;
+        $("backCoverPreview").classList.remove("hidden");
+        $("backCoverIcon").classList.add("hidden");
+        status.innerText = "📸 تم التقاط الغلاف الخلفي بنجاح.";
+      }
+
+      if (!lsGet("jalees_claude_key")) {
+        status.innerText += " (ضع مفتاح Claude في ⚙️ ليقرأ البيانات تلقائياً، أو اكتبها بالأسفل)";
+        return;
+      }
+      status.innerText = "⏳ جاري قراءة بيانات الغلاف بواسطة Claude...";
+      try {
+        const prompt = side === "front"
+          ? `اقرأ صورة غلاف هذا الكتاب واستخرج بصيغة JSON فقط بدون أي شرح: {"title":"عنوان الكتاب","author":"اسم المؤلف","publisher":"دار النشر إن وجدت"}`
+          : "اقرأ صورة الغلاف الخلفي للكتاب ولخص نبذة الكتاب في جملتين بالعربية.";
+        const reply = await callClaude([imageBlock(forAi), { type: "text", text: prompt }], { maxTokens: 4000 });
+        if (side === "front") {
+          const m = reply.match(/\{[\s\S]*\}/);
+          if (!m) throw new Error("لم يُستخرج JSON");
+          const info = JSON.parse(m[0]);
+          if (info.title) $("newBookTitle").value = info.title;
+          if (info.author) $("newBookAuthor").value = info.author;
+          if (info.publisher) $("newBookPublisher").value = info.publisher;
+          status.innerText = "✓ قرأ Claude الغلاف الأمامي وعبأ اسم الكتاب والمؤلف تلقائياً!";
+          if (info.title) window.findCopyForNew();
+        } else {
+          $("newBookBackSummary").value = reply;
+          status.innerText = "✓ قرأ Claude الغلاف الخلفي واستخرج نبذة الكتاب!";
+        }
+      } catch (err) {
+        console.warn(err);
+        status.innerText = `⚠️ حُفظت الصورة لكن تعذّرت قراءتها (${explainError(err)}). اكتب البيانات يدوياً.`;
+      }
+    };
+
+    // ───────── المايكروفون ─────────
+    let recognition = null;
+    let isRecording = false;
+    let contMode = false, contRetries = 0;
+    const SRClass = () => window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    function paintCont() {
+      $("contBtn").innerText = contMode ? "🔁 المحادثة المستمرة: تعمل (قل «توقف» للإنهاء)" : "🔁 المحادثة المستمرة: متوقفة";
+      $("contBtn").className = contMode
+        ? "text-[11px] bg-amber-500/20 border border-amber-500/50 text-amber-300 px-3 py-1.5 rounded-xl font-bold"
+        : "text-[11px] bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-xl font-bold";
+    }
+    window.toggleContinuous = function () {
+      if (!SRClass()) { toast("المتصفح لا يدعم التعرّف على الصوت. جرّب Chrome أو Safari."); return; }
+      contMode = !contMode;
+      contRetries = 0;
+      paintCont();
+      if (contMode) {
+        if (!autoSpeakOn()) window.toggleAutoSpeak();
+        if (!wakeLock) window.toggleWakeLock();
+        startListening();
+      } else {
+        try { recognition?.stop(); } catch (e) {}
+        window.stopSpeaking();
+      }
+    };
+    function stopContinuous(msg) {
+      contMode = false;
+      paintCont();
+      if (msg) toast(msg);
+    }
+
+    window.toggleVoiceRecording = function () {
+      if (!SRClass()) {
+        toast("المتصفح الحالي لا يدعم المايكروفون المباشر، استخدم مايكروفون لوحة المفاتيح في الخانة النصية.");
+        return;
+      }
+      if (isRecording && recognition) { if (contMode) stopContinuous(); recognition.stop(); return; }
+      startListening();
+    };
+
+    function startListening() {
+      const SR = SRClass();
+      if (!SR || isRecording) return;
+      window.stopSpeaking();
+      recognition = new SR();
+      recognition.lang = "ar-KW";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      const btn = $("micButton");
+      const status = $("voiceStatusText");
+      const idle = "الكتاب الورقي بيدك يا بوعلي.. اضغط المايكروفون وقول رقم الصفحة أو سؤالك أو انتقادك";
+      let gotResult = false;
+
+      recognition.onstart = () => {
+        isRecording = true;
+        btn.classList.add("mic-recording");
+        status.innerText = "🔴 أسمعك الحين يا بوعلي.. تكلم براحتك";
+      };
+      recognition.onresult = (e) => {
+        gotResult = true;
+        contRetries = 0;
+        const transcript = arabicDigits(e.results[0][0].transcript);
+        if (contMode && /^\s*(توقف|كفاية|كفى|انهاء|إنهاء|وقف)\s*[.!]?\s*$/.test(transcript)) {
+          stopContinuous("تم إنهاء المحادثة المستمرة");
+          return;
+        }
+        $("userPromptInput").value = transcript;
+        const pageMatch = transcript.match(/(?:صفح[ةه]|ص)\s*(\d+)/);
+        if (pageMatch) window.updatePage(parseInt(pageMatch[1]));
+        window.sendDiscussion();
+      };
+      recognition.onerror = (e) => {
+        if (e.error === "no-speech" && contMode) return; // يعاد الاستماع في onend
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") stopContinuous();
+        const msgs = { "not-allowed": "المايكروفون ممنوع؛ اسمح للموقع باستخدامه من إعدادات المتصفح.", "service-not-allowed": "المايكروفون ممنوع؛ اسمح للموقع باستخدامه من إعدادات المتصفح.", "no-speech": "ما سمعت شي، جرّب مرة ثانية.", "audio-capture": "لا يوجد مايكروفون متاح.", "network": "الاتصال ضعيف، تعذّر التعرّف على الصوت." };
+        toast(msgs[e.error] || `خطأ في التعرّف على الصوت (${e.error})`);
+      };
+      recognition.onend = () => {
+        isRecording = false;
+        btn.classList.remove("mic-recording");
+        status.innerText = idle;
+        // في المحادثة المستمرة: إن صمت المستخدم أعد الاستماع ثلاث مرات ثم توقف
+        if (contMode && !gotResult && !asking) {
+          if (++contRetries > 3) stopContinuous("توقفت المحادثة المستمرة لأني لم أسمع شيئًا");
+          else setTimeout(() => { if (contMode && !asking) startListening(); }, 400);
+        }
+      };
+      try { recognition.start(); } catch (e) { console.warn(e); }
+    }
+
+    window.handleSnapPage = async function (e) {
+      const input = e.target;
+      const file = input.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await compressImage(file, 1200, 0.8);
+        snappedImageBase64 = dataUrl.split(",")[1];
+        $("snappedPagePreview").classList.remove("hidden");
+      } catch (err) {
+        toast("تعذّر قراءة الصورة.");
+      }
+      input.value = "";
+    };
+
+    window.clearSnappedPage = function () {
+      snappedImageBase64 = null;
+      $("snappedPagePreview").classList.add("hidden");
+    };
+
+    // ───────── النقاش ─────────
+    const normAr = (s) => String(s || "").replace(/[ً-ٰٟـ]/g, "").replace(/[إأآ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه");
+    function searchTokens(q) {
+      const words = normAr(q).split(/[^\p{L}\p{N}]+/u).map(w => w.replace(/^(ال|و|ب|ل|ف|لل)/, "")).filter(w => w.length >= 3);
+      return [...new Set(words)];
+    }
+    function relatedPageNums(pages, q, exclude, k = 3) {
+      const toks = searchTokens(q);
+      if (!toks.length) return [];
+      const scored = [];
+      for (const [n, t] of Object.entries(pages)) {
+        if (exclude.has(+n)) continue;
+        const nt = normAr(t);
+        let sc = 0;
+        for (const w of toks) { let i = -1, c = 0; while (c < 5 && (i = nt.indexOf(w, i + 1)) !== -1) c++; sc += c; }
+        if (sc > 1) scored.push([sc, +n]);
+      }
+      return scored.sort((a, b) => b[0] - a[0]).slice(0, k).map(x => x[1]);
+    }
+
+    function buildPageContext(pages, elecPage, q) {
+      const nums = Object.keys(pages).map(Number);
+      if (!nums.length) return "";
+      if (nums.length === 1) return String(pages[nums[0]]).slice(0, 12000);
+      const out = [];
+      const near = new Set([elecPage - 1, elecPage, elecPage + 1]);
+      for (const p of near) if (pages[p]) out.push(`[صفحة ${p}${p === elecPage ? " — الصفحة الحالية" : ""}] ${String(pages[p]).slice(0, 4000)}`);
+      const rel = relatedPageNums(pages, q || "", near);
+      if (rel.length) out.push("— مقاطع أخرى من الكتاب قد تتصل بسؤاله —");
+      rel.forEach(p => out.push(`[صفحة ${p}] ${String(pages[p]).slice(0, 2500)}`));
+      return out.join("\n");
+    }
+
+    function wholeBookText(pages, cap = 350000) {
+      const nums = Object.keys(pages).map(Number).sort((a, b) => a - b);
+      const total = nums.reduce((a, n) => a + Math.min(pages[n].length, 3000), 0);
+      const step = total > cap ? Math.ceil(total / cap) : 1;
+      const picked = nums.filter((_, i) => i % step === 0);
+      const text = picked.map(n => `[ص ${n}] ${pages[n].slice(0, 3000)}`).join("\n");
+      return { text, chars: text.length, sampled: step > 1, count: picked.length, total: nums.length };
+    }
+
+    const QUICK_ACTIONS = [
+      { id: "ideas", label: "💡 أفضل الأفكار", scope: "book", prompt: "استخرج أهم سبع أفكار في هذا الكتاب مرتبة حسب الأهمية. لكل فكرة: جملة تشرحها، ثم موضعها في الكتاب (الصفحة إن أمكن). ثم اختم بسؤال واحد يفتح لنا نقاشًا." },
+      { id: "quotes", label: "❝ أفضل الاقتباسات", scope: "book", json: true, prompt: 'اختر أجمل وأعمق عشرة اقتباسات من الكتاب، منقولة حرفيًا من النص المرفق فقط (لا تختلق ولا تعدّل). أجب بـ JSON فقط بلا أي نص خارجه: {"quotes":[{"text":"الاقتباس","page":رقم_الصفحة_أو_0}],"comment":"تعليق قصير من جملتين عن اختيارك"}' },
+      { id: "summary", label: "📝 لخّص الكتاب", scope: "book", prompt: "لخّص الكتاب: فكرته المركزية، وأبرز محاوره بالترتيب، وخلاصته. ثم اذكر لمن يصلح هذا الكتاب." },
+      { id: "page", label: "📖 اشرح هذه الصفحة", scope: "page", prompt: "اشرح لي الصفحة التي أقرأها الآن شرحًا واضحًا: ما فكرتها، وما الكلمات الصعبة، وكيف ترتبط بما قبلها." },
+      { id: "critique", label: "⚖️ انقد الكتاب", scope: "book", prompt: "قدّم نقدًا متوازنًا للكتاب: أقوى ما فيه، ونقاط ضعفه أو ما يُختلف فيه، وأين قد يكون الكاتب متحيزًا أو متجاوزًا للأدلة. ثم اسألني رأيي." },
+      { id: "quiz", label: "🎯 اختبرني", scope: "book", prompt: "اختبرني فيما قرأته: اطرح عليّ ثلاثة أسئلة تفكير متدرجة عن الكتاب (لا تعطني الأجوبة الآن)، وانتظر إجابتي لتصحح لي." },
+      { id: "similar", label: "📚 كتب مشابهة", scope: "none", prompt: "اقترح خمسة كتب مشابهة لهذا الكتاب أو تكمّله، مع سطر لكل كتاب عن سبب ترشيحه وبماذا يختلف." },
+      { id: "connect", label: "🔗 اربطه بنقاشاتي", scope: "connect", prompt: "اربط هذا الكتاب بما ناقشناه سابقًا في كتبي الأخرى: ما التقاطعات والتناقضات والأفكار التي تتكامل؟" }
+    ];
+
+    function renderQuickActions() {
+      $("quickActions").innerHTML = QUICK_ACTIONS.map(a => `<button onclick="quickAsk('${a.id}')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 px-2.5 py-1.5 rounded-lg font-medium">${a.label}</button>`).join("");
+    }
+    window.quickAsk = (id) => {
+      const a = QUICK_ACTIONS.find(x => x.id === id);
+      if (a) runAsk({ userText: a.label, type: "insight", action: a });
+    };
+
+    const autoSpeakOn = () => lsGet("jalees_autospeak") !== "0";
+    function paintAutoSpeak() { $("autoSpeakBtn").innerText = autoSpeakOn() ? "🔊 الرد صوتي" : "📝 الرد كتابي"; }
+    window.toggleAutoSpeak = function () {
+      lsSet("jalees_autospeak", autoSpeakOn() ? "0" : "1");
+      if (!autoSpeakOn()) window.stopSpeaking();
+      paintAutoSpeak();
+      toast(autoSpeakOn() ? "الردود ستُقرأ بصوت مسموع" : "الردود ستظهر مكتوبة فقط");
+    };
+
+    let pendingText = "";
+    function renderThread() {
+      const book = getCurrentBook();
+      const box = $("chatThread");
+      if (!book) { box.innerHTML = ""; return; }
+      const items = (book.discussions || []).slice(0, 6).reverse();
+      let html = items.map(d => `
+        <div class="space-y-1.5">
+          <div class="text-[11px] text-slate-400">ص ${esc(d.page)} • ${d.type === "insight" ? "💡" : d.type === "critique" ? "✍️" : "🎙️"}</div>
+          <div class="bg-slate-800/80 rounded-xl rounded-tr-sm px-3 py-2 text-xs text-slate-200 whitespace-pre-line">${esc(d.userText)}</div>
+          <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl rounded-tl-sm px-3 py-2.5 text-sm text-slate-100 leading-relaxed whitespace-pre-line">${esc(d.aiText)}
+            <div class="pt-1.5"><button onclick="speakDiscussion('${esc(book.id)}','${esc(d.id)}')" class="text-[11px] text-amber-300 font-bold">🔊 استمع</button></div></div>
+        </div>`).join("");
+      if (pendingText) html += `<div class="space-y-1.5"><div class="bg-slate-800/80 rounded-xl px-3 py-2 text-xs text-slate-200">${esc(pendingText)}</div><div class="text-xs text-amber-300 animate-pulse">⏳ Claude يفكر...</div></div>`;
+      if (!html) html = `<p class="text-sm text-slate-300 leading-relaxed">حياك الله يا علي. اضغط المايكروفون أو اكتب مداخلتك، أو جرّب أحد الأسئلة الجاهزة بالأعلى. كل نقاش يُحفظ في أرشيف الكتاب.</p>`;
+      box.innerHTML = html;
+      box.scrollTop = box.scrollHeight;
+      const last = (book.discussions || [])[0];
+      $("latestTopicBadge").innerText = last ? `ص ${last.page} • ${last.topic}` : "بانتظار أول نقاش";
+    }
+
+    window.sendDiscussion = function () {
+      const text = $("userPromptInput").value.trim();
+      if (!text && !snappedImageBase64) return;
+      const entryType = document.querySelector('input[name="entryType"]:checked').value;
+      runAsk({ userText: text || "اشرح لي هذه الصفحة المصورة", type: entryType });
+    };
+
+    let asking = false;
+    async function runAsk({ userText, type, action }) {
+      if (asking) { toast("انتظر انتهاء الرد الحالي."); return; }
+      const book = getCurrentBook();
+      if (!book) { toast("أضف كتاباً أولاً من مكتبتي."); return; }
+      if (!lsGet("jalees_claude_key")) { toast("ضع مفتاح Claude أولاً من زر ⚙️ Claude"); window.openModal("settingsModal"); return; }
+
+      const paperPage = parseInt(book.currentPage) || 1;
+      const elecPage = paperPage + (parseInt(book.pageOffset) || 0);
+      const pages = await idb.get(book.id);
+      const hasText = Object.keys(pages).length > 0;
+      const scope = action?.scope || "discuss";
+
+      let contextBlock = "";
+      if (scope === "book" && hasText) {
+        const w = wholeBookText(pages);
+        if (w.chars > 120000 && !confirm(`سيُرسل نحو ${Math.round(w.chars / 1000)} ألف حرف من الكتاب إلى Claude${w.sampled ? " (عيّنة موزعة على الكتاب كله)" : ""}، وقد يستهلك رصيدًا أكبر من النقاش العادي. المتابعة؟`)) return;
+        contextBlock = `نص الكتاب${w.sampled ? ` (عيّنة من ${w.count} صفحة من أصل ${w.total})` : ""}:\n${w.text}`;
+      } else if (scope === "connect") {
+        const others = state.books.flatMap(b => (b.discussions || []).slice(0, 15).map(d => `- [${b.title} ص${d.page}] ${d.topic}: ${String(d.userText).slice(0, 120)} ⟵ ${String(d.aiText).slice(0, 200)}`)).slice(0, 60);
+        contextBlock = `نقاشات علي السابقة في مكتبته:\n${others.join("\n")}`;
+      } else if (hasText) {
+        contextBlock = buildPageContext(pages, elecPage, userText);
+        if (contextBlock) contextBlock = `نص من النسخة الإلكترونية (الصفحة الإلكترونية المقابلة ${elecPage}${book.fileApprox ? "، والترقيم تقريبي لأن الملف بلا صفحات حقيقية" : ""}):\n${contextBlock}`;
+      }
+
+      const spoken = autoSpeakOn();
+      const style = spoken
+        ? `- الرد سيُسمع بصوت مسموع: جمل قصيرة واضحة، بلا قوائم ولا رموز ولا markdown ولا أقواس زائدة؛ استعمل «أولًا، ثانيًا...» عند العدّ، واكتب أرقام الصفحات بالحروف.`
+        : `- الرد سيُقرأ مكتوبًا: يمكنك قوائم قصيرة بنقاط «•» وفقرات مرتبة، بلا رموز markdown مثل ** أو #.`;
+      const noText = hasText ? "" : `\n- لا يتوفر نص الكتاب لديك الآن؛ اعتمد على معرفتك وبيّن بإيجاز أنك لا ترى النص، ولا تقدّم اقتباسًا على أنه حرفي ما لم تكن متأكدًا.`;
+      const system = `أنت "جليس"، شريك القراءة الخاص للمهندس علي المتروك (بوعلي). يقرأ كتابًا ورقيًا ويناقشك فيه.
+الكتاب: "${book.title}" للمؤلف "${book.author}" (طبعة: ${book.publisher}). هو الآن في الصفحة الورقية رقم ${paperPage}.` +
+        (book.summary ? `\nنبذة الكتاب: ${book.summary}` : "") +
+        (contextBlock ? `\n\n${contextBlock}` : "") +
+        `\n\nتعليمات الرد:
+- ${action?.json ? "أجب بـ JSON فقط كما طُلب." : "ابدأ السطر الأول بـ [الموضوع: عنوان من ثلاث إلى خمس كلمات] ثم اكتب الرد من السطر التالي."}
+- خاطبه باسمه (يا بوعلي) بنبرة ودودة رجولية مع ترحيب خليجي خفيف، والشرح بالعربية الفصحى السهلة.
+${style}
+- رتّب الرد: الجواب أولًا، ثم تفصيل أو مثال قصير، ثم سؤال واحد يدفع النقاش للأمام${action ? "" : "، ولا تتجاوز نحو ١٥٠ كلمة إلا إن طلب التوسّع"}.
+- لا تختلق اقتباسات ولا معلومات؛ إن لم تكن متأكدًا فقل ذلك.${noText}`;
+
+      const history = [];
+      (book.discussions || []).slice(0, 4).reverse().forEach(d => {
+        history.push({ role: "user", content: String(d.userText) }, { role: "assistant", content: String(d.aiText).slice(0, 1500) });
+      });
+      const userBlocks = [];
+      if (snappedImageBase64 && !action) userBlocks.push(imageBlock(snappedImageBase64));
+      userBlocks.push({ type: "text", text: action ? action.prompt : `مداخلة علي المتروك: ${userText}` });
+
+      asking = true;
+      pendingText = userText;
+      $("sendBtn").disabled = true;
+      renderThread();
+
+      try {
+        const raw = await callClaude(userBlocks, { system, history, maxTokens: action ? 12000 : 8000 });
+        let topic = action ? action.label.replace(/^[^\p{L}]+/u, "") : `نقاش حول صفحة ${paperPage}`;
+        let reply = raw;
+        if (action?.json) {
+          const m = raw.match(/\{[\s\S]*\}/);
+          const obj = m ? JSON.parse(m[0]) : { quotes: [] };
+          const qs = (obj.quotes || []).filter(q => q.text);
+          qs.forEach(q => {
+            if (!state.quotes.some(x => x.text === q.text)) state.quotes.push({ text: q.text, book: `${book.title}${q.page ? ` (ص ${q.page})` : ""}` });
+          });
+          reply = qs.map((q, i) => `${i + 1}. «${q.text}»${q.page ? ` (ص ${q.page})` : ""}`).join("\n\n") + (obj.comment ? `\n\n${obj.comment}` : "");
+          if (!qs.length) reply = obj.comment || raw;
+        } else {
+          const tm = raw.match(/\[الموضوع:\s*(.*?)\]/);
+          if (tm) { topic = tm[1].trim() || topic; reply = raw.replace(tm[0], "").trim(); }
+        }
+
+        book.discussions.unshift({
+          id: "d_" + Date.now(),
+          page: paperPage,
+          topic,
+          type,
+          userText,
+          aiText: reply,
+          date: new Date().toLocaleDateString("ar-KW")
+        });
+        $("userPromptInput").value = "";
+        window.clearSnappedPage();
+        pendingText = "";
+        renderThread();
+        window.renderArchive();
+        showQuote();
+        syncToCloud();
+        if (autoSpeakOn()) {
+          const spoke = window.speakText(reply);
+          if (contMode) spoke.then(() => { if (contMode && !asking) startListening(); });
+        } else if (contMode) startListening();
+      } catch (err) {
+        if (contMode) stopContinuous();
+        console.warn("claude failed", err);
+        pendingText = "";
+        renderThread();
+        toast("تعذّر رد Claude: " + explainError(err));
+      } finally {
+        asking = false;
+        $("sendBtn").disabled = false;
+      }
+    }
+
+    window.speakDiscussion = function (bookId, id) {
+      const b = state.books.find(x => x.id === bookId);
+      const d = b?.discussions.find(x => x.id === id);
+      if (d) window.speakText(d.aiText);
+    };
+
+    // ───────── الأرشيف ─────────
+    function archiveItems() {
+      const scope = $("archiveScope")?.value || "current";
+      const q = ($("archiveSearch")?.value || "").trim().toLowerCase();
+      const filter = $("archiveFilter")?.value || "all";
+      const books = scope === "all" ? state.books : [getCurrentBook()].filter(Boolean);
+      return books.flatMap(b => (b.discussions || []).map(d => ({ d, b }))).filter(({ d }) => {
+        const matchType = filter === "all" || d.type === filter;
+        const matchQ = !q || String(d.page).includes(q) || String(d.topic).toLowerCase().includes(q) || String(d.userText).toLowerCase().includes(q) || String(d.aiText).toLowerCase().includes(q);
+        return matchType && matchQ;
+      });
+    }
+
+    window.renderArchive = function () {
+      const list = $("archiveList");
+      if (!getCurrentBook()) { list.innerHTML = ""; return; }
+      const showBook = ($("archiveScope")?.value || "current") === "all";
+      const items = archiveItems();
+      if (!items.length) {
+        list.innerHTML = `<div class="card-bg rounded-xl p-4 text-center text-xs text-slate-400">لا توجد مناقشات محفوظة${showBook ? "" : " لهذا الكتاب"} بعد.</div>`;
+        return;
+      }
+      const typeBadge = (t) => t === "critique" ? ["bg-emerald-500/20 text-emerald-300", "✍️ ملاحظة وانتقاد", "border-r-emerald-500"] : t === "insight" ? ["bg-sky-500/20 text-sky-300", "💡 فكرة / اقتباس", "border-r-sky-500"] : ["bg-amber-500/20 text-amber-300", "🎙️ نقاش", "border-r-amber-500"];
+      list.innerHTML = items.map(({ d, b }) => {
+        const [cls, label, border] = typeBadge(d.type);
+        const args = `'${esc(b.id)}','${esc(d.id)}'`;
+        return `
+        <div class="card-bg rounded-2xl p-4 space-y-2 border-r-4 ${border}">
+          ${showBook ? `<div class="text-[11px] text-slate-400">📖 ${esc(b.title)}</div>` : ""}
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-extrabold text-amber-400 bg-slate-900 px-2.5 py-1 rounded-lg">صفحة ${esc(d.page)} — ${esc(d.topic)}</span>
+            <span class="text-[10px] px-2 py-0.5 rounded shrink-0 ${cls}">${label}</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">مداخلة علي: "${esc(d.userText)}"</p>
+          <p class="text-xs text-slate-400 leading-relaxed whitespace-pre-line">${esc(d.aiText)}</p>
+          ${d.myNote ? `<p class="text-xs text-emerald-300 bg-emerald-950/40 rounded-lg px-2.5 py-1.5">📝 ملاحظتي: ${esc(d.myNote)}</p>` : ""}
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[11px]">
+            <button onclick="speakDiscussion(${args})" class="text-amber-400 font-bold">🔊 استماع</button>
+            <div class="flex gap-3 items-center">
+              <button onclick="editDiscussion(${args})" class="text-slate-300">✏️ تعديل</button>
+              <button onclick="deleteDiscussion(${args})" class="text-rose-400">🗑 حذف</button>
+              <button onclick="jumpToPage('${esc(b.id)}',${parseInt(d.page) || 1})" class="text-slate-400 hover:text-white">ص ${esc(d.page)} ⬅</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+    };
+
+    window.deleteDiscussion = function (bookId, id) {
+      const b = state.books.find(x => x.id === bookId);
+      if (!b || !confirm("حذف هذه المناقشة؟")) return;
+      b.discussions = b.discussions.filter(d => d.id !== id);
+      window.renderArchive();
+      renderThread();
+      syncToCloud();
+    };
+
+    window.editDiscussion = function (bookId, id) {
+      const b = state.books.find(x => x.id === bookId);
+      const d = b?.discussions.find(x => x.id === id);
+      if (!d) return;
+      const topic = prompt("عنوان الموضوع:", d.topic);
+      if (topic === null) return;
+      const note = prompt("ملاحظتك الشخصية على هذه المناقشة (اتركها فارغة لحذفها):", d.myNote || "");
+      d.topic = topic.trim() || d.topic;
+      if (note !== null) d.myNote = note.trim();
+      window.renderArchive();
+      renderThread();
+      syncToCloud();
+    };
+
+    window.readAllBookArchive = function () {
+      const items = archiveItems();
+      if (!items.length) return;
+      const text = items.map(({ d, b }) => `في كتاب ${b.title}، صفحة ${d.page}، موضوع ${d.topic}: ${d.aiText}`).join(". ثم ننتقل إلى ");
+      window.speakText("قراءة متصلة لمناقشات علي المتروك: " + text);
+    };
+
+    window.exportArchive = function () {
+      const items = archiveItems();
+      if (!items.length) { toast("لا يوجد ما يُصدَّر."); return; }
+      const byBook = new Map();
+      items.forEach(({ d, b }) => { if (!byBook.has(b.id)) byBook.set(b.id, { b, list: [] }); byBook.get(b.id).list.push(d); });
+      const md = [...byBook.values()].map(({ b, list }) =>
+        `# ${b.title} — ${b.author}\n\n` + list.slice().reverse().map(d =>
+          `## ص ${d.page} — ${d.topic}\n**أنا:** ${d.userText}\n\n**جليس:** ${d.aiText}\n` + (d.myNote ? `\n**ملاحظتي:** ${d.myNote}\n` : "") + `\n*${d.date || ""}*\n`).join("\n")
+      ).join("\n\n---\n\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([md], { type: "text/markdown;charset=utf-8" }));
+      a.download = `jalees-${(byBook.size === 1 ? [...byBook.values()][0].b.title : "library").replace(/[^\p{L}\p{N}]+/gu, "-")}.md`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    };
+
+    window.jumpToPage = function (bookId, p) {
+      if (bookId !== state.currentBookId) { state.currentBookId = bookId; showingBackCover = false; }
+      window.updatePage(p);
+      window.switchTab("discuss");
+    };
+
+    // ───────── تتبّع القراءة ─────────
+    const dayKey = (d = new Date()) => d.toLocaleDateString("en-CA");
+    function logReading(delta) {
+      if (!(delta > 0 && delta <= 20)) return; // القفزات الكبيرة ليست قراءة
+      const k = dayKey();
+      state.readLog[k] = (state.readLog[k] || 0) + delta;
+    }
+    function readingStreak() {
+      const d = new Date();
+      if (!(state.readLog[dayKey(d)] > 0)) d.setDate(d.getDate() - 1);
+      let n = 0;
+      while (state.readLog[dayKey(d)] > 0) { n++; d.setDate(d.getDate() - 1); }
+      return n;
+    }
+    function pagesInLastDays(days) {
+      let t = 0;
+      const d = new Date();
+      for (let i = 0; i < days; i++) { t += state.readLog[dayKey(d)] || 0; d.setDate(d.getDate() - 1); }
+      return t;
+    }
+    function renderStats() {
+      const today = state.readLog[dayKey()] || 0;
+      const goal = state.dailyGoal;
+      const st = readingStreak();
+      $("streakBadge").innerText = st ? `🔥 ${st} ${st === 1 ? "يوم" : "أيام"} متتالية` : "ابدأ سلسلتك اليوم";
+      $("goalText").innerText = `اليوم: ${today} من ${goal} صفحة` + (today >= goal ? " ✓ أنجزت هدفك" : "");
+      $("goalBar").style.width = Math.min(100, Math.round(today / goal * 100)) + "%";
+      $("weekText").innerText = `آخر ٧ أيام: ${pagesInLastDays(7)} صفحة`;
+      const b = getCurrentBook();
+      if (b) {
+        const total = parseInt(b.totalPages) || 0;
+        const pct = total ? Math.min(100, Math.round((parseInt(b.currentPage) || 1) / total * 100)) : 0;
+        $("bookPercent").innerText = total ? `من ${total} (${pct}%)` : "";
+        $("bookBar").style.width = pct + "%";
+      }
+    }
+    window.setDailyGoal = function () {
+      const v = parseInt(arabicDigits(prompt("كم صفحة هدفك اليومي؟", state.dailyGoal) || ""));
+      if (!v || v < 1) return;
+      state.dailyGoal = Math.min(v, 500);
+      renderStats();
+      syncToCloud();
+    };
+
+    const entryTime = (d) => (String(d.id).startsWith("d_") ? parseInt(String(d.id).slice(2)) || 0 : 0);
+
+    window.weeklySummary = async function () {
+      if (!lsGet("jalees_claude_key")) { toast("ضع مفتاح Claude أولاً من زر ⚙️ Claude"); window.openModal("settingsModal"); return; }
+      const since = Date.now() - 7 * 864e5;
+      const recent = state.books.flatMap(b => (b.discussions || []).filter(d => entryTime(d) >= since).map(d => ({ b, d })));
+      const pages = pagesInLastDays(7), st = readingStreak();
+      if (!recent.length && !pages) { toast("لا توجد قراءة أو نقاشات في آخر أسبوع بعد."); return; }
+      $("weeklyText").innerText = "⏳ جاري إعداد ملخصك...";
+      window.openModal("weeklyModal");
+      const lines = recent.slice(0, 40).map(({ b, d }) => `- [${b.title} ص${d.page}] ${d.topic}: ${String(d.userText).slice(0, 100)} ⟵ ${String(d.aiText).slice(0, 220)}`).join("\n");
+      const progress = state.books.filter(b => parseInt(b.totalPages)).map(b => `${b.title}: ص${b.currentPage} من ${b.totalPages}`).join("، ");
+      try {
+        const text = await callClaude([{ type: "text", text: `أعدّ لعلي المتروك ملخصه الأسبوعي للقراءة.\nأرقامه: قرأ نحو ${pages} صفحة في آخر ٧ أيام، وهدفه اليومي ${state.dailyGoal}، وسلسلته الحالية ${st} يوم. ${progress ? "تقدمه: " + progress + "." : ""}\nنقاشاته:\n${lines || "(لا نقاشات)"}` }],
+          { system: 'أنت "جليس"، شريك القراءة لعلي المتروك (بوعلي). اكتب ملخصًا أسبوعيًا مسموعًا بجمل قصيرة بلا رموز ولا markdown: أولًا ما قرأه وأرقامه بإيجاز، ثم أبرز ثلاث أفكار ناقشتماها، ثم اقتراح واحد لما يكمله الأسبوع القادم، ثم تشجيع صادق قصير. لا تتجاوز ١٨٠ كلمة، ولا تختلق شيئًا غير موجود في البيانات.', maxTokens: 6000 });
+        $("weeklyText").innerText = text;
+        if (autoSpeakOn()) window.speakText(text);
+      } catch (e) {
+        $("weeklyText").innerText = "تعذّر إعداد الملخص: " + explainError(e);
+      }
+    };
+
+    // ───────── تصدير Word ─────────
+    window.exportDocx = async function () {
+      const items = archiveItems();
+      if (!items.length) { toast("لا يوجد ما يُصدَّر."); return; }
+      const x = (t) => String(t).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+      const para = (text, { size = 26, bold = false, color = "", after = 120 } = {}) =>
+        String(text).split("\n").map(line => `<w:p><w:pPr><w:bidi/><w:spacing w:after="${after}"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>${bold ? "<w:b/><w:bCs/>" : ""}${color ? `<w:color w:val="${color}"/>` : ""}<w:sz w:val="${size}"/><w:szCs w:val="${size}"/><w:rtl/></w:rPr><w:t xml:space="preserve">${x(line)}</w:t></w:r></w:p>`).join("");
+      const byBook = new Map();
+      items.forEach(({ d, b }) => { if (!byBook.has(b.id)) byBook.set(b.id, { b, list: [] }); byBook.get(b.id).list.push(d); });
+      let body = para("مناقشاتي في القراءة — جليس", { size: 40, bold: true, color: "A8620A", after: 240 });
+      for (const { b, list } of byBook.values()) {
+        body += para(`${b.title} — ${b.author}`, { size: 32, bold: true, after: 180 });
+        for (const d of list.slice().reverse()) {
+          body += para(`صفحة ${d.page} — ${d.topic}`, { size: 26, bold: true, color: "A8620A" });
+          body += para(`أنا: ${d.userText}`, { size: 24 });
+          body += para(`جليس: ${d.aiText}`, { size: 24 });
+          if (d.myNote) body += para(`ملاحظتي: ${d.myNote}`, { size: 24, color: "2C6A49" });
+          body += para(d.date || "", { size: 20, color: "888888", after: 240 });
+        }
+      }
+      const zip = new JSZip();
+      zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+      zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+      zip.file("word/document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:bidi/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>`);
+      const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `jalees-${(byBook.size === 1 ? [...byBook.values()][0].b.title : "library").replace(/[^\p{L}\p{N}]+/gu, "-")}.docx`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    };
+
+    // ───────── مكتبتي (قائمة الكتب) ─────────
+    window.renderLibrary = function () {
+      const q = ($("libSearch")?.value || "").trim().toLowerCase();
+      $("libCount").innerText = state.books.length;
+      const books = state.books.filter(b => !q || b.title.toLowerCase().includes(q) || String(b.author).toLowerCase().includes(q));
+      if (!books.length) {
+        $("libGrid").innerHTML = `<div class="col-span-2 card-bg rounded-xl p-6 text-center text-xs text-slate-400">${state.books.length ? "لا نتائج مطابقة." : "مكتبتك فارغة. اضغط «إضافة كتاب» للبدء."}</div>`;
+        return;
+      }
+      $("libGrid").innerHTML = books.map(b => `
+        <div class="card-bg rounded-2xl p-3 space-y-2 ${b.id === state.currentBookId ? "ring-2 ring-amber-500/60" : ""}">
+          <img src="${esc(b.cover || defaultArabicCover)}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=defaultArabicCover" onclick="openBook('${esc(b.id)}')" class="w-full h-40 object-cover rounded-xl bg-slate-800 cursor-pointer" />
+          <div class="space-y-0.5">
+            <p class="text-xs font-extrabold text-white leading-snug line-clamp-2">${esc(b.title)}</p>
+            <p class="text-[11px] text-slate-400 truncate">${esc(b.author)}</p>
+            <p class="text-[10px] text-slate-500">${(b.discussions || []).length} مناقشة • ص ${esc(b.currentPage)}${parseInt(b.totalPages) ? ` من ${esc(b.totalPages)}` : ""}</p>
+            ${parseInt(b.totalPages) ? `<div class="h-1 rounded-full bg-slate-800 overflow-hidden"><div class="h-full gold-grad" style="width:${Math.min(100, Math.round((parseInt(b.currentPage) || 1) / parseInt(b.totalPages) * 100))}%"></div></div>` : ""}
+          </div>
+          <div class="flex gap-1.5">
+            <button onclick="openBook('${esc(b.id)}')" class="flex-1 gold-grad text-slate-950 font-bold py-1.5 rounded-lg text-[11px]">فتح</button>
+            <button onclick="openEditBook('${esc(b.id)}')" class="bg-slate-800 border border-slate-700 text-slate-300 px-2 rounded-lg text-[11px]">✏️</button>
+            <button onclick="deleteBookById('${esc(b.id)}')" class="bg-rose-500/15 border border-rose-500/30 text-rose-300 px-2 rounded-lg text-[11px]">🗑</button>
+          </div>
+        </div>`).join("");
+    };
+    window.openBook = (id) => { window.selectBook(id); window.switchTab("home"); };
+
+    window.deleteBookById = async function (id) {
+      const book = state.books.find(b => b.id === id);
+      if (!book) return;
+      if (!confirm(`حذف كتاب "${book.title}" مع كل مناقشاته وملفه؟ لا يمكن التراجع.`)) return;
+      state.books = state.books.filter(b => b.id !== id);
+      if (state.currentBookId === id) { state.currentBookId = state.books[0]?.id || ""; showingBackCover = false; }
+      idb.del(id);
+      window.renderAll();
+      await syncToCloud();
+    };
+
+    let tempEditCover = "";
+    window.openEditBook = function (id) {
+      const b = state.books.find(x => x.id === id);
+      if (!b) return;
+      tempEditCover = "";
+      $("editBookId").value = id;
+      $("editTitle").value = b.title;
+      $("editAuthor").value = b.author;
+      $("editPublisher").value = b.publisher || "";
+      $("editSummary").value = b.summary || "";
+      $("editOffset").value = b.pageOffset || 0;
+      $("editTotal").value = b.totalPages || "";
+      $("editCoverPreview").src = b.cover || defaultArabicCover;
+      window.openModal("editBookModal");
+    };
+    window.editCoverPhoto = async function (e) {
+      const f = e.target.files[0];
+      e.target.value = "";
+      if (!f) return;
+      try { tempEditCover = await compressImage(f, 360, 0.7); $("editCoverPreview").src = tempEditCover; } catch (err) { toast("تعذّر قراءة الصورة."); }
+    };
+    window.saveEditBook = function () {
+      const b = state.books.find(x => x.id === $("editBookId").value);
+      if (!b) return;
+      const title = $("editTitle").value.trim();
+      if (!title) { toast("العنوان مطلوب."); return; }
+      b.title = title;
+      b.author = $("editAuthor").value.trim() || "مؤلف";
+      b.publisher = $("editPublisher").value.trim() || "طبعة ورقية";
+      b.summary = $("editSummary").value.trim();
+      b.pageOffset = parseInt($("editOffset").value) || 0;
+      b.totalPages = parseInt($("editTotal").value) || 0;
+      if (tempEditCover) b.cover = tempEditCover;
+      window.closeModal("editBookModal");
+      window.renderAll();
+      syncToCloud();
+      toast("✓ تم حفظ التعديلات");
+    };
+
+    // ───────── البحث عن كتاب ─────────
+    async function fetchJson(url, ms = 9000) {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), ms);
+      try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.json();
+      } finally { clearTimeout(t); }
+    }
+
+    async function searchGoogleBooks(q) {
+      const data = await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&printType=books&maxResults=10`);
+      return (data.items || []).map(item => {
+        const info = item.volumeInfo || {};
+        return {
+          title: info.title ? (info.subtitle ? `${info.title}: ${info.subtitle}` : info.title) : "بدون عنوان",
+          author: (info.authors || [])[0] || "مؤلف غير معروف",
+          pub: info.publisher || "",
+          cover: (info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || "").replace("http:", "https:"),
+          desc: info.description || ""
+        };
+      });
+    }
+
+    async function searchOpenLibrary(q) {
+      const data = await fetchJson(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=10&fields=title,author_name,publisher,cover_i`);
+      return (data.docs || []).map(d => ({
+        title: d.title || "بدون عنوان",
+        author: (d.author_name || [])[0] || "مؤلف غير معروف",
+        pub: (d.publisher || [])[0] || "",
+        cover: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : "",
+        desc: ""
+      }));
+    }
+
+    window.searchBookOnline = async function () {
+      const q = $("webSearchQuery").value.trim();
+      if (!q) return;
+      const box = $("webSearchResults");
+      box.innerHTML = `<p class="text-xs text-amber-300">جاري البحث في محركات الكتب...</p>`;
+
+      // المحركان معاً، وفشل أحدهما لا يوقف الآخر
+      const [g, o] = await Promise.allSettled([searchGoogleBooks(q), searchOpenLibrary(q)]);
+      const merged = [...(g.status === "fulfilled" ? g.value : []), ...(o.status === "fulfilled" ? o.value : [])];
+      const seen = new Set();
+      webResults = merged.filter(b => {
+        const k = (b.title + "|" + b.author).toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      }).slice(0, 10);
+
+      if (!webResults.length) {
+        box.innerHTML = (g.status === "rejected" && o.status === "rejected")
+          ? `<p class="text-xs text-rose-400">تعذّر الاتصال بمحركات البحث. تأكد من الإنترنت أو أدخل بيانات الكتاب يدوياً بالأسفل.</p>`
+          : `<p class="text-xs text-slate-400 text-center py-2">لم يتم العثور على الكتاب. جرّب كلمات أقل، أو أدخل العنوان يدوياً بالأسفل، أو صوّر غلافه ليقرأه Claude.</p>`;
+        return;
+      }
+
+      box.innerHTML = webResults.map((b, i) => `
+        <div class="flex items-center justify-between gap-2 bg-slate-900 p-2 rounded-lg border border-slate-700 text-xs mt-1">
+          <div class="flex gap-2 items-center overflow-hidden">
+            ${b.cover ? `<img src="${esc(b.cover)}" referrerpolicy="no-referrer" onerror="this.style.display='none'" class="w-8 h-10 object-cover rounded shrink-0">` : `<div class="w-8 h-10 bg-slate-800 rounded flex items-center justify-center text-[10px] text-slate-500 shrink-0">غلاف</div>`}
+            <div class="overflow-hidden">
+              <p class="text-white font-bold truncate max-w-[150px]">${esc(b.title)}</p>
+              <p class="text-[10px] text-slate-400 truncate max-w-[150px]">${esc(b.author)}</p>
+            </div>
+          </div>
+          <button onclick="fillBookFromWeb(${i})" class="bg-amber-500/20 text-amber-300 px-3 py-1.5 rounded-lg font-bold shrink-0">اختيار ✓</button>
+        </div>
+      `).join("");
+    };
+
+    window.fillBookFromWeb = function (i) {
+      const b = webResults[i];
+      if (!b) return;
+      $("newBookTitle").value = b.title;
+      $("newBookAuthor").value = b.author;
+      $("newBookPublisher").value = b.pub;
+      if (b.desc) $("newBookBackSummary").value = b.desc.slice(0, 600);
+      if (b.cover) {
+        tempFrontCover = b.cover;
+        $("frontCoverPreview").src = b.cover;
+        $("frontCoverPreview").classList.remove("hidden");
+        $("frontCoverIcon").classList.add("hidden");
+      }
+      $("webSearchResults").innerHTML = `<p class="text-xs text-emerald-400 text-center py-2">✓ تم اختيار "${esc(b.title)}" — راجع البيانات بالأسفل ثم اضغط «حفظ الكتاب».</p>`;
+      window.findCopyForNew();
+    };
+
+    // ───────── قراءة الملفات (PDF / EPUB / Word / نص) ─────────
+    const stripHtml = (html) => html
+      .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<\/(p|div|h[1-6]|li|tr|br)\s*>|<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n));
+
+    // يحوّل نصًا طويلًا إلى «صفحات»: بفواصل الصفحات إن وُجدت (\f)، وإلا بتقطيع تقريبي
+    function paginate(text) {
+      const ff = text.split("\f");
+      const pages = {};
+      if (ff.length >= 8) {
+        ff.forEach((t, i) => { const c = t.replace(/\s+/g, " ").trim(); if (c) pages[i + 1] = c.slice(0, 6000); });
+        return { pages, approx: false };
+      }
+      const paras = text.replace(/\r/g, "").split(/\n+/).map(x => x.replace(/\s+/g, " ").trim()).filter(Boolean);
+      let cur = "", n = 1;
+      for (const p of paras) {
+        if (cur && (cur.length + p.length) > 1800) { pages[n++] = cur; cur = ""; }
+        cur = cur ? cur + "\n" + p : p;
+        while (cur.length > 3600) { pages[n++] = cur.slice(0, 1800); cur = cur.slice(1800); }
+      }
+      if (cur) pages[n] = cur;
+      return { pages, approx: true };
+    }
+
+    async function epubToText(buf) {
+      const zip = await JSZip.loadAsync(buf);
+      const container = await zip.file("META-INF/container.xml").async("string");
+      const opfPath = container.match(/full-path="([^"]+)"/)[1];
+      const opf = await zip.file(opfPath).async("string");
+      const base = opfPath.includes("/") ? opfPath.slice(0, opfPath.lastIndexOf("/") + 1) : "";
+      const manifest = {};
+      for (const m of opf.matchAll(/<item\b[^>]*>/g)) {
+        const id = m[0].match(/\bid="([^"]+)"/)?.[1], href = m[0].match(/\bhref="([^"]+)"/)?.[1];
+        if (id && href) manifest[id] = href;
+      }
+      const spine = [...opf.matchAll(/<itemref\b[^>]*idref="([^"]+)"/g)].map(m => manifest[m[1]]).filter(Boolean);
+      const parts = [];
+      for (const href of spine) {
+        const f = zip.file(decodeURIComponent(base + href).replace(/#.*$/, ""));
+        if (f) parts.push(stripHtml(await f.async("string")));
+      }
+      return parts.join("\n\n");
+    }
+
+    async function docxToText(buf) {
+      const zip = await JSZip.loadAsync(buf);
+      const xml = await zip.file("word/document.xml").async("string");
+      return stripHtml(xml.replace(/<\/w:p>/g, "</p>").replace(/<w:tab\/>/g, " ").replace(/<w:br\/>/g, "</p>"));
+    }
+
+    // يعيد { pages, ok, approx }
+    async function readBookFile(file, status) {
+      status.className = "text-[11px] text-emerald-400 mt-1";
+      status.innerText = "⏳ جاري قراءة الملف...";
+      const fail = (msg) => { status.className = "text-[11px] text-rose-400 mt-1"; status.innerText = "⚠️ " + msg; return { pages: {}, ok: false }; };
+      const name = file.name.toLowerCase();
+      try {
+        let text = null;
+        if (/\.(txt|md)$/.test(name)) text = await file.text();
+        else if (name.endsWith(".epub")) text = await epubToText(await file.arrayBuffer());
+        else if (name.endsWith(".docx")) text = await docxToText(await file.arrayBuffer());
+        else if (name.endsWith(".doc")) return fail("صيغة .doc القديمة غير مدعومة؛ احفظها بصيغة docx أو PDF من Word ثم ارفعها.");
+        if (text !== null) {
+          const { pages, approx } = paginate(text);
+          const n = Object.keys(pages).length;
+          if (!n) return fail("لم يُستخرج أي نص من الملف.");
+          status.innerText = `✓ تمت قراءة الملف (${n} ${approx ? "جزء ≈ صفحة" : "صفحة"})` + (approx ? " — الترقيم تقريبي لأن الملف بلا صفحات حقيقية" : "");
+          return { pages, ok: true, approx };
+        }
+        if (!name.endsWith(".pdf")) return fail("صيغة غير مدعومة. المدعوم: PDF وEPUB وdocx ونص.");
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+        const maxPages = Math.min(pdf.numPages, 1500);
+        const pages = {};
+        let nonEmpty = 0;
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const str = content.items.map(it => it.str).join(" ").replace(/\s+/g, " ").trim();
+          if (str) { pages[i] = str.slice(0, 6000); nonEmpty++; }
+          if (i % 25 === 0) status.innerText = `⏳ تمت قراءة ${i} من ${pdf.numPages} صفحة...`;
+        }
+        if (!nonEmpty) return fail("الـ PDF ممسوح ضوئيًا بلا نص قابل للاستخراج. جرّب نسخة نصية أو EPUB.");
+        status.innerText = `✓ تمت قراءة ${nonEmpty} صفحة من ${pdf.numPages}` + (pdf.numPages > maxPages ? ` (أول ${maxPages} فقط)` : "") + ".";
+        return { pages, ok: true, approx: false };
+      } catch (err) {
+        console.warn(err);
+        return fail("تعذّرت قراءة الملف (" + (err.message || "خطأ") + ").");
+      }
+    }
+
+    let tempFileName = "", tempFileApprox = false;
+    window.handlePdfUpload = async function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const r = await readBookFile(file, $("pdfUploadStatus"));
+      tempPdfPages = r.pages;
+      tempFileName = r.ok ? file.name : "";
+      tempFileApprox = !!r.approx;
+      e.target.value = "";
+    };
+
+    // إضافة أو استبدال ملف كتاب موجود
+    window.attachFileToBook = async function (e) {
+      const file = e.target.files[0];
+      const book = getCurrentBook();
+      e.target.value = "";
+      if (!file || !book) return;
+      const r = await readBookFile(file, $("attachStatus"));
+      if (!r.ok) return;
+      await storeFileForBook(book, r.pages, file.name, r.approx);
+    };
+
+    async function storeFileForBook(book, pages, name, approx) {
+      if (!(await idb.set(book.id, pages))) { toast("تعذّر حفظ الملف على هذا الجهاز."); return false; }
+      book.fileName = name;
+      book.fileApprox = !!approx;
+      if (!approx && !book.totalPages) { const mx = Math.max(...Object.keys(pages).map(Number)); if (mx > 20) book.totalPages = Math.max(1, mx - (parseInt(book.pageOffset) || 0)); }
+      syncToCloud();
+      window.renderAll();
+      return true;
+    }
+
+    window.removeBookFile = async function () {
+      const book = getCurrentBook();
+      if (!book || !confirm("إزالة ملف الكتاب من هذا الجهاز؟ لن يتأثر الكتاب ولا مناقشاتك.")) return;
+      await idb.del(book.id);
+      book.fileName = "";
+      book.fileApprox = false;
+      $("attachStatus").innerText = "";
+      syncToCloud();
+      window.renderAll();
+    };
+
+    // ───────── البحث عن نسخة رقمية (أرشيف الإنترنت) ─────────
+    const IA = "https://archive.org";
+    const FORMAT_LABEL = (fmts = []) => {
+      if (fmts.includes("DjVuTXT")) return ["📄 نص مفهرس بالصفحات", "bg-emerald-500/20 text-emerald-300"];
+      if (fmts.includes("EPUB")) return ["📘 EPUB", "bg-sky-500/20 text-sky-300"];
+      if (fmts.some(f => /PDF/.test(f))) return ["📕 PDF", "bg-amber-500/20 text-amber-300"];
+      if (fmts.includes("Text")) return ["📝 نص", "bg-sky-500/20 text-sky-300"];
+      return ["ملف", "bg-slate-700 text-slate-300"];
+    };
+
+    async function searchDigitalCopies(title) {
+      const clean = title.replace(/[()\[\]{}"“”«»:؟?!]/g, " ").replace(/\s+/g, " ").trim();
+      const run = async (q) => {
+        const url = `${IA}/advancedsearch.php?q=${encodeURIComponent(q)}&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=language&fl[]=format&rows=12&output=json`;
+        const data = await fetchJson(url, 12000);
+        return (data.response?.docs || []).filter(d => (d.format || []).some(f => /DjVuTXT|EPUB|PDF|^Text$/i.test(f)));
+      };
+      let docs = await run(`title:(${clean}) AND mediatype:texts AND NOT access-restricted-item:true`);
+      if (!docs.length) docs = await run(`(${clean}) AND mediatype:texts AND NOT access-restricted-item:true`);
+      return docs;
+    }
+
+    function pickFile(files) {
+      const size = (f) => parseInt(f.size) || 0;
+      const by = (fn, max) => files.find(f => fn(f) && size(f) > 0 && size(f) < max);
+      return by(f => f.format === "DjVuTXT", 25e6)
+        || by(f => /\.epub$/i.test(f.name), 60e6)
+        || by(f => /\.docx$/i.test(f.name), 40e6)
+        || by(f => /\.txt$/i.test(f.name) && !/_meta|_files/.test(f.name), 10e6)
+        || by(f => /Text PDF/.test(f.format || ""), 80e6)
+        || by(f => /\.pdf$/i.test(f.name) && !/_text\.pdf$/i.test(f.name), 80e6);
+    }
+
+    async function downloadCopy(id, statusEl) {
+      statusEl.className = "text-[11px] text-emerald-400 mt-1";
+      statusEl.innerText = "⏳ جاري فحص ملفات النسخة...";
+      const meta = await fetchJson(`${IA}/metadata/${encodeURIComponent(id)}`, 15000);
+      const f = pickFile(meta.files || []);
+      if (!f) throw new Error("لا يوجد ملف قابل للتحميل في هذه النسخة (قد تكون للإعارة فقط).");
+      const url = `${IA}/download/${encodeURIComponent(id)}/${f.name.split("/").map(encodeURIComponent).join("/")}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("فشل التحميل (HTTP " + res.status + ")");
+      const total = parseInt(f.size) || 0;
+      const reader = res.body.getReader();
+      const chunks = [];
+      let got = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        got += value.length;
+        statusEl.innerText = `⬇ جاري التحميل ${total ? Math.round(got / total * 100) + "%" : Math.round(got / 1024) + " KB"}...`;
+      }
+      const base = f.name.split("/").pop();
+      // djvu.txt يحمل صيغة نص لكن بامتداد txt
+      return new File([new Blob(chunks)], base.replace(/_djvu\.txt$/i, ".txt"), { type: "application/octet-stream" });
+    }
+
+    function renderCopyResults(box, docs, onPick) {
+      box.innerHTML = docs.map((d, i) => {
+        const [label, cls] = FORMAT_LABEL(d.format);
+        const title = String(d.title || d.identifier).replace(/_/g, " ");
+        const creator = Array.isArray(d.creator) ? d.creator[0] : d.creator;
+        return `<div class="flex items-center justify-between gap-2 bg-slate-900 p-2 rounded-lg border border-slate-700 text-xs">
+          <div class="overflow-hidden space-y-0.5">
+            <p class="text-white font-bold truncate max-w-[190px]">${esc(title)}</p>
+            <p class="text-[10px] text-slate-400 truncate max-w-[190px]">${esc(creator || "")} <span class="px-1.5 py-0.5 rounded ${cls}">${label}</span></p>
+          </div>
+          <button data-i="${i}" class="pick bg-emerald-500/20 text-emerald-300 px-2.5 py-1.5 rounded-lg font-bold shrink-0">استخدم ✓</button>
+        </div>`;
+      }).join("");
+      box.querySelectorAll("button.pick").forEach(btn => btn.addEventListener("click", () => onPick(docs[+btn.dataset.i], btn)));
+    }
+
+    async function findCopies({ title, boxId, statusEl, onUse }) {
+      const box = $(boxId);
+      if (!title) { toast("اكتب اسم الكتاب أولاً."); return; }
+      box.innerHTML = `<p class="text-xs text-emerald-300">جاري البحث عن "${esc(title)}" في أرشيف الإنترنت...</p>`;
+      try {
+        const docs = await searchDigitalCopies(title);
+        if (!docs.length) {
+          box.innerHTML = `<p class="text-xs text-slate-400 py-1">لم أجد نسخة حرة لهذا الكتاب (غالبًا لأنه محمي بحقوق النشر). ارفع نسختك الخاصة بالأسفل وسأقرأها.</p>`;
+          return;
+        }
+        renderCopyResults(box, docs, async (doc, btn) => {
+          btn.disabled = true;
+          try {
+            const file = await downloadCopy(doc.identifier, statusEl);
+            const r = await readBookFile(file, statusEl);
+            if (r.ok) { await onUse(doc, file, r); box.innerHTML = `<p class="text-xs text-emerald-400 py-1">✓ تم ربط النسخة بالكتاب.</p>`; }
+          } catch (err) {
+            console.warn(err);
+            statusEl.className = "text-[11px] text-rose-400 mt-1";
+            statusEl.innerText = "⚠️ " + (/Failed to fetch|NetworkError/i.test(err.message) ? "المتصفح لم يستطع تحميل الملف (حظر من المصدر). حمّله يدويًا من archive.org/details/" + doc.identifier + " ثم ارفعه." : err.message);
+          } finally { btn.disabled = false; }
+        });
+      } catch (err) {
+        console.warn(err);
+        box.innerHTML = `<p class="text-xs text-rose-400">تعذّر الاتصال بأرشيف الإنترنت. جرّب لاحقًا أو ارفع نسختك.</p>`;
+      }
+    }
+
+    window.findCopyForNew = () => findCopies({
+      title: $("newBookTitle").value.trim(),
+      boxId: "copyResultsNew",
+      statusEl: $("pdfUploadStatus"),
+      onUse: async (doc, file, r) => {
+        tempPdfPages = r.pages;
+        tempFileName = (doc.title ? String(doc.title).replace(/_/g, " ") : file.name).slice(0, 80);
+        tempFileApprox = !!r.approx;
+        if (!tempFrontCover) {
+          tempFrontCover = `${IA}/services/img/${doc.identifier}`;
+          $("frontCoverPreview").src = tempFrontCover;
+          $("frontCoverPreview").classList.remove("hidden");
+          $("frontCoverIcon").classList.add("hidden");
+        }
+      }
+    });
+
+    window.findCopyForCurrent = () => {
+      const book = getCurrentBook();
+      if (!book) return;
+      findCopies({
+        title: book.title,
+        boxId: "copyResultsHome",
+        statusEl: $("attachStatus"),
+        onUse: async (doc, file, r) => {
+          if (await storeFileForBook(book, r.pages, String(doc.title || file.name).replace(/_/g, " ").slice(0, 80), r.approx)) {
+            if (!book.cover) book.cover = `${IA}/services/img/${doc.identifier}`;
+            window.renderAll();
+          }
+        }
+      });
+    };
+
+    window.saveNewBook = async function () {
+      const title = $("newBookTitle").value.trim();
+      if (!title) { toast("يا بوعلي، اكتب عنوان الكتاب أو ابحث عنه أولاً"); return; }
+      const btn = $("saveBookBtn");
+      btn.disabled = true;
+      try {
+        const author = $("newBookAuthor").value.trim() || "مؤلف";
+        const publisher = $("newBookPublisher").value.trim() || "طبعة ورقية";
+        const backSummary = $("newBookBackSummary").value.trim();
+        const offset = parseInt($("newBookOffset").value) || 0;
+
+        const newBook = {
+          id: "b_" + Date.now(),
+          title,
+          author,
+          publisher,
+          cover: tempFrontCover || "",
+          backCover: tempBackCover || "",
+          currentPage: 1,
+          pageOffset: offset,
+          summary: backSummary || `ملف شامل لكتاب ${title} (${publisher}) في مكتبة علي المتروك.`,
+          similar: "سيتم اقتراح كتب مشابهة بناءً على نقاشاتك وملاحظاتك.",
+          discussions: []
+        };
+
+        if (Object.keys(tempPdfPages).length) {
+          const ok = await idb.set(newBook.id, tempPdfPages);
+          if (!ok) toast("تعذّر حفظ نص الـ PDF على هذا الجهاز.");
+          else {
+            newBook.fileName = tempFileName || "ملف الكتاب"; newBook.fileApprox = tempFileApprox;
+            const mx = Math.max(...Object.keys(tempPdfPages).map(Number));
+            if (!tempFileApprox && mx > 20) newBook.totalPages = Math.max(1, mx - offset);
+          }
+        }
+
+        state.books.unshift(newBook);
+        state.currentBookId = newBook.id;
+        tempPdfPages = {};
+        tempFileName = "";
+        tempFileApprox = false;
+        tempFrontCover = "";
+        tempBackCover = "";
+        showingBackCover = false;
+        webResults = [];
+        ["newBookTitle", "newBookAuthor", "newBookPublisher", "newBookBackSummary", "webSearchQuery"].forEach(id => { $(id).value = ""; });
+        $("newBookOffset").value = 0;
+        $("frontCoverPreview").classList.add("hidden");
+        $("backCoverPreview").classList.add("hidden");
+        $("frontCoverIcon").classList.remove("hidden");
+        $("backCoverIcon").classList.remove("hidden");
+        $("coverAiStatus").innerText = "";
+        $("pdfUploadStatus").innerText = "";
+        $("webSearchResults").innerHTML = "";
+        $("copyResultsNew").innerHTML = "";
+
+        window.closeModal("addBookModal");
+        window.renderAll();
+        window.switchTab("home");
+        toast(`✓ أُضيف كتاب "${title}" وأصبح كتابك الحالي`);
+        syncToCloud();
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    window.generateBookHubSummary = async function () {
+      const book = getCurrentBook();
+      if (!book) return;
+      if (!lsGet("jalees_claude_key")) { toast("ضع مفتاح Claude أولاً من زر ⚙️ Claude"); return; }
+      if (!book.discussions.length) { toast("أضف مناقشة واحدة على الأقل لهذا الكتاب أولاً."); return; }
+      const btn = $("hubBtn");
+      btn.disabled = true;
+      $("bookHubSummary").innerText = "⏳ جاري التلخيص...";
+      try {
+        const textToSummarize = book.discussions.slice(0, 30).map(d => d.topic + ": " + String(d.aiText).slice(0, 300)).join(" | ");
+        const reply = await callClaude([{ type: "text", text: `كتاب "${book.title}" للمؤلف "${book.author}". لخّص تجربة علي المتروك معه في 3 أسطر، واقترح 3 كتب مشابهة. أجب بصيغة JSON فقط: {"summary":"...","similar":"• كتاب (مؤلف) • كتاب (مؤلف) • كتاب (مؤلف)"}\n\nمناقشاته: ${textToSummarize}` }], { maxTokens: 4000 });
+        const m = reply.match(/\{[\s\S]*\}/);
+        const obj = m ? JSON.parse(m[0]) : { summary: reply };
+        if (obj.summary) book.summary = obj.summary;
+        if (obj.similar) book.similar = obj.similar;
+        syncToCloud();
+      } catch (e) {
+        console.warn(e);
+        toast("تعذّر التلخيص: " + explainError(e));
+      } finally {
+        btn.disabled = false;
+        window.renderAll();
+      }
+    };
+
+    window.openModal = id => $(id).classList.remove("hidden");
+    window.closeModal = id => $(id).classList.add("hidden");
+
+    window.saveSettings = function () {
+      const gKey = $("claudeKeyInput").value.trim();
+      const gModel = $("claudeModelSelect").value;
+      lsSet("jalees_voice_name", $("voiceSelect").value);
+      lsSet("jalees_voice_rate", $("voiceRate").value);
+      const eKey = $("elevenKeyInput").value.trim();
+      const eVoice = $("elevenVoiceIdInput").value.trim();
+      const setOrClear = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
+      setOrClear("jalees_claude_key", gKey);
+      setOrClear("jalees_claude_model", gModel);
+      populateModelSelects();
+      setOrClear("jalees_eleven_key", eKey);
+      setOrClear("jalees_eleven_voice", eVoice);
+      window.closeModal("settingsModal");
+      toast("تم حفظ إعداداتك يا بوعلي بنجاح!");
+    };
+
+    let wakeLock = null;
+    async function acquireWakeLock() {
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { if (wakeLock && wakeLock.released) wakeLock = null; });
+    }
+    window.toggleWakeLock = async function () {
+      const btn = $("wakeBtn");
+      try {
+        if (!wakeLock) {
+          await acquireWakeLock();
+          btn.innerText = "💡 مضاءة";
+          btn.classList.add("text-amber-300", "border-amber-500");
+        } else {
+          await wakeLock.release();
+          wakeLock = null;
+          btn.innerText = "💡 الشاشة";
+          btn.classList.remove("text-amber-300", "border-amber-500");
+        }
+      } catch (e) {
+        toast("متصفحك لا يدعم إبقاء الشاشة مضاءة.");
+      }
+    };
+    document.addEventListener("visibilitychange", async () => {
+      if (document.visibilityState === "visible" && $("wakeBtn").innerText.includes("مضاءة")) {
+        try { await acquireWakeLock(); } catch (e) {}
+      }
+    });
+
+    // ───────── التشغيل ─────────
+    $("claudeKeyInput").value = lsGet("jalees_claude_key") || "";
+    $("voiceRate").value = lsGet("jalees_voice_rate") || "0.92";
+    populateModelSelects();
+    populateVoices();
+    // تنظيف بقايا مفاتيح Gemini القديمة
+    ["jalees_gemini_key", "jalees_gemini_model"].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+    $("elevenKeyInput").value = lsGet("jalees_eleven_key") || "";
+    $("elevenVoiceIdInput").value = lsGet("jalees_eleven_voice") || "pNInz6obpgDQGcFmaJgB";
+
+    $("webSearchQuery").addEventListener("keydown", e => { if (e.key === "Enter") window.searchBookOnline(); });
+    $("userPromptInput").addEventListener("keydown", e => { if (e.key === "Enter") window.sendDiscussion(); });
+
+    renderQuickActions();
+    paintAutoSpeak();
+    paintCont();
+    showQuote();
+    window.renderAll();
+    loadFromCloud();
+
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+  </script>
+</body>
+</html>
