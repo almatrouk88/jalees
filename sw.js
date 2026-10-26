@@ -1,5 +1,5 @@
 // Service worker بسيط: الشبكة أولاً لملفات التطبيق، والكاش عند انقطاع الاتصال
-const CACHE = "jalees-v9";
+const CACHE = "jalees-v10";
 const SHELL = ["./", "./index.html", "./styles.css", "./manifest.json", "./icon.svg", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {

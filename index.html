@@ -1488,7 +1488,9 @@
     const QUICK_ACTIONS = [
       { id: "ideas", label: "💡 أفضل الأفكار", scope: "book", prompt: "استخرج أهم سبع أفكار في هذا الكتاب مرتبة حسب الأهمية. لكل فكرة: جملة تشرحها، ثم موضعها في الكتاب (الصفحة إن أمكن). ثم اختم بسؤال واحد يفتح لنا نقاشًا." },
       { id: "quotes", label: "❝ أفضل الاقتباسات", scope: "book", json: true, prompt: 'اختر أجمل وأعمق عشرة اقتباسات من الكتاب، منقولة حرفيًا من النص المرفق فقط (لا تختلق ولا تعدّل). أجب بـ JSON فقط بلا أي نص خارجه: {"quotes":[{"text":"الاقتباس","page":رقم_الصفحة_أو_0}],"comment":"تعليق قصير من جملتين عن اختيارك"}' },
-      { id: "summary", label: "📝 لخّص الكتاب", scope: "book", prompt: "لخّص الكتاب: فكرته المركزية، وأبرز محاوره بالترتيب، وخلاصته. ثم اذكر لمن يصلح هذا الكتاب." },
+      { id: "upto", label: "📍 لخّص حتى صفحتي", scope: "upto", prompt: "لخّص لي ما قرأته من بداية الكتاب حتى الصفحة التي وصلتها الآن فقط، دون كشف أي شيء يأتي بعدها. رتّبه في محاور قصيرة، ثم اسألني سؤالًا واحدًا عمّا استوقفني." },
+      { id: "recent", label: "🕒 لخّص آخر ١٠ صفحات", scope: "recent", prompt: "لخّص لي آخر عشر صفحات قرأتها (حتى صفحتي الحالية): ما الجديد فيها، وكيف ترتبط بما قبلها، وما أهم جملة فيها." },
+      { id: "summary", label: "📝 لخّص الكتاب كله", scope: "book", prompt: "لخّص الكتاب: فكرته المركزية، وأبرز محاوره بالترتيب، وخلاصته. ثم اذكر لمن يصلح هذا الكتاب." },
       { id: "page", label: "📖 اشرح هذه الصفحة", scope: "page", prompt: "اشرح لي الصفحة التي أقرأها الآن شرحًا واضحًا: ما فكرتها، وما الكلمات الصعبة، وكيف ترتبط بما قبلها." },
       { id: "critique", label: "⚖️ انقد الكتاب", scope: "book", prompt: "قدّم نقدًا متوازنًا للكتاب: أقوى ما فيه، ونقاط ضعفه أو ما يُختلف فيه، وأين قد يكون الكاتب متحيزًا أو متجاوزًا للأدلة. ثم اسألني رأيي." },
       { id: "quiz", label: "🎯 اختبرني", scope: "book", prompt: "اختبرني فيما قرأته: اطرح عليّ ثلاثة أسئلة تفكير متدرجة عن الكتاب (لا تعطني الأجوبة الآن)، وانتظر إجابتي لتصحح لي." },
@@ -1552,7 +1554,16 @@
       const elecPage = paperPage + (parseInt(book.pageOffset) || 0);
       const pages = await idb.get(book.id);
       const hasText = Object.keys(pages).length > 0;
-      const scope = action?.scope || "discuss";
+      let scope = action?.scope || "discuss";
+      let rangeNote = "";
+      // «لخّص من صفحة ١٠٠ إلى ١٢٠»
+      const rm = !action && arabicDigits(userText).match(/من\s*(?:صفحة\s*)?(\d+)\s*(?:إلى|الى|لين|حتى|-)\s*(?:صفحة\s*)?(\d+)/);
+      let rangeFrom = 0, rangeTo = 0;
+      if (rm && hasText && /لخص|لخّص|ملخص|اختصر/.test(normAr(userText).replace(/ّ/g, ""))) {
+        rangeFrom = Math.min(+rm[1], +rm[2]); rangeTo = Math.max(+rm[1], +rm[2]);
+        if (rangeTo - rangeFrom > 60) { toast("اختر نطاقًا أقصر من ٦٠ صفحة."); return; }
+        scope = "range";
+      }
 
       let contextBlock = "";
       if (scope === "book" && hasText) {
@@ -1561,6 +1572,17 @@
         const estUsd = pr ? (w.chars / 2.5) / 1e6 * pr[0] : null;
         if (w.chars > 120000 && !confirm(`سيُرسل نحو ${Math.round(w.chars / 1000)} ألف حرف من الكتاب إلى Claude${w.sampled ? " (عيّنة موزعة على الكتاب كله)" : ""}.` + (estUsd ? `\nالتكلفة التقريبية لأول طلب: $${estUsd.toFixed(2)}. الأسئلة التالية عن نفس الكتاب خلال ٥ دقائق أرخص بكثير بفضل التخزين المؤقت.` : "") + `\nالمتابعة؟`)) return;
         contextBlock = `نص الكتاب${w.sampled ? ` (عيّنة من ${w.count} صفحة من أصل ${w.total})` : ""}:\n${w.text}`;
+      } else if ((scope === "upto" || scope === "recent" || scope === "range") && hasText) {
+        const off = parseInt(book.pageOffset) || 0;
+        let lo = 1, hi = elecPage;
+        if (scope === "recent") lo = Math.max(1, elecPage - 9);
+        if (scope === "range") { lo = rangeFrom + off; hi = rangeTo + off; rangeNote = ` (من صفحة ${rangeFrom} إلى ${rangeTo})`; }
+        const sub = {};
+        for (const [n, t] of Object.entries(pages)) if (+n >= lo && +n <= hi) sub[n] = t;
+        if (!Object.keys(sub).length) { toast("لا يوجد نص لهذا النطاق في الملف المرفق. تحقق من معايرة الصفحات."); return; }
+        const w = wholeBookText(sub, 300000);
+        if (w.chars > 120000 && !confirm(`سيُرسل نحو ${Math.round(w.chars / 1000)} ألف حرف إلى Claude. المتابعة؟`)) return;
+        contextBlock = `نص الصفحات المطلوبة (الصفحات الإلكترونية ${lo} إلى ${hi}${book.fileApprox ? "، والترقيم تقريبي" : ""}):\n${w.text}`;
       } else if (scope === "connect") {
         const others = state.books.flatMap(b => (b.discussions || []).slice(0, 15).map(d => `- [${b.title} ص${d.page}] ${d.topic}: ${String(d.userText).slice(0, 120)} ⟵ ${String(d.aiText).slice(0, 200)}`)).slice(0, 60);
         contextBlock = `نقاشات علي السابقة في مكتبته:\n${others.join("\n")}`;
@@ -1600,7 +1622,7 @@ ${style}
       });
       const userBlocks = [];
       if (snappedImageBase64 && !action) userBlocks.push(imageBlock(snappedImageBase64));
-      userBlocks.push({ type: "text", text: action ? action.prompt : `مداخلة علي المتروك: ${userText}` });
+      userBlocks.push({ type: "text", text: action ? action.prompt : `مداخلة علي المتروك: ${userText}${rangeNote ? `\n(لخّص النص المرفق فقط${rangeNote})` : ""}` });
 
       asking = true;
       pendingText = userText;
