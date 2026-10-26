@@ -469,18 +469,45 @@
         <p class="text-[11px] text-slate-400">زر «حدّث القائمة» يجلب كل النماذج المتاحة في حسابك. يمكنك تبديل النموذج أيضًا من شاشة النقاش.</p>
       </div>
 
-      <div class="space-y-1.5 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
-        <label class="text-xs font-bold text-slate-200">2. الصوت (قراءة الردود):</label>
+      <div class="space-y-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+        <label class="text-xs font-bold text-slate-200">2. الصوت (قراءة الردود)</label>
+        <p class="text-[11px] text-slate-400">الترتيب التلقائي: Azure إن وضعت مفتاحه، ثم ElevenLabs، ثم صوت جهازك. أوضح صوت عربي مجاني هو Azure (حصة مجانية شهرية).</p>
+
+        <p class="text-[11px] font-bold text-emerald-300 pt-1">أ) Azure — أصوات عصبية عربية (موصى به)</p>
+        <input id="azureKeyInput" type="password" placeholder="مفتاح Azure Speech" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+        <div class="grid grid-cols-2 gap-2">
+          <input id="azureRegionInput" type="text" placeholder="المنطقة مثل uaenorth" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+          <select id="azureVoiceSelect" class="bg-slate-800 border border-slate-700 rounded-xl px-2 py-2 text-xs text-slate-200">
+            <option value="ar-SA-HamedNeural">حامد — سعودي (رجل)</option>
+            <option value="ar-KW-FahedNeural">فهد — كويتي (رجل)</option>
+            <option value="ar-AE-HamdanNeural">حمدان — إماراتي (رجل)</option>
+            <option value="ar-EG-ShakirNeural">شاكر — مصري (رجل)</option>
+            <option value="ar-SA-ZariyahNeural">زارية — سعودية (امرأة)</option>
+            <option value="ar-KW-NouraNeural">نورة — كويتية (امرأة)</option>
+          </select>
+        </div>
+
+        <p class="text-[11px] font-bold text-amber-300 pt-1">ب) ElevenLabs (اختياري)</p>
+        <input id="elevenKeyInput" type="password" placeholder="مفتاح ElevenLabs API" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
+        <input id="elevenVoiceIdInput" type="text" value="pNInz6obpgDQGcFmaJgB" placeholder="Voice ID" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300" />
+
+        <p class="text-[11px] font-bold text-slate-300 pt-1">ج) صوت الجهاز (بلا مفتاح)</p>
         <select id="voiceSelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200"></select>
+        <p id="voiceHint" class="text-[11px] text-slate-400"></p>
         <div class="flex items-center gap-2 text-[11px] text-slate-300">
           <span>السرعة</span>
-          <input id="voiceRate" type="range" min="0.7" max="1.2" step="0.05" value="0.92" class="flex-1" />
-          <button onclick="testVoice()" class="bg-amber-500/20 text-amber-300 px-3 py-1 rounded-lg font-bold">🔊 جرّب</button>
+          <input id="voiceRate" type="range" min="0.7" max="1.2" step="0.05" value="0.9" class="flex-1" />
         </div>
-        <p class="text-[11px] text-slate-400">للحصول على أفضل صوت بلا مفتاح: اختر صوتًا عربيًا مميزًا بكلمة Enhanced أو Premium أو Natural أو Google أو Microsoft (يتوفر بعضها في Edge وSafari وتحميلها من إعدادات الجهاز). للصوت البشري الواقعي ضع مفتاح ElevenLabs:</p>
-        <input id="elevenKeyInput" type="password" placeholder="مفتاح ElevenLabs API (اختياري)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
-        <input id="elevenVoiceIdInput" type="text" value="pNInz6obpgDQGcFmaJgB" placeholder="Voice ID" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-300 mt-1" />
+        <div class="flex gap-2">
+          <button onclick="testVoice()" class="flex-1 bg-amber-500/20 text-amber-300 py-1.5 rounded-lg font-bold text-[11px]">🔊 جرّب الصوت الحالي</button>
+          <button onclick="testVoice(true)" class="flex-1 bg-slate-700 text-slate-200 py-1.5 rounded-lg font-bold text-[11px]">🔈 جرّب صوت الجهاز</button>
+        </div>
       </div>
+
+      <label class="flex items-start gap-2 text-[11px] text-slate-300 bg-slate-800/50 border border-slate-700 rounded-xl p-3">
+        <input id="syncSecretsChk" type="checkbox" class="mt-0.5" />
+        <span>احفظ مفاتيحي في حسابي على Google لتتعبأ تلقائيًا في كل جهاز أسجّل منه (يتطلب القواعد الأقوى في Firebase).</span>
+      </label>
 
       <button onclick="saveSettings()" class="w-full gold-grad text-slate-950 font-bold py-3 rounded-xl text-sm">حفظ الإعدادات ✓</button>
     </div>
@@ -748,6 +775,7 @@
       $("signInBtn").classList.toggle("hidden", !!u);
       $("signOutBtn").classList.toggle("hidden", !u);
       loadFromCloud();
+      if (u) setTimeout(() => window.pullSecrets?.(), 0);
     };
     window.signInGoogle = async function () {
       if (!auth) { toast("Firebase غير متاح."); return; }
@@ -1036,52 +1064,112 @@
       sel.innerHTML = `<option value="">تلقائي (الأفضل المتاح)</option>` +
         list.map(v => `<option value="${esc(v.name)}" ${v.name === saved ? "selected" : ""}>${esc(v.name)} (${esc(v.lang)})</option>`).join("");
       if (!list.length) sel.innerHTML = `<option value="">لا توجد أصوات عربية في هذا الجهاز</option>`;
+      const good = list.some(v => voiceScore(v) >= 6);
+      const hint = $("voiceHint");
+      if (hint) hint.innerText = !list.length
+        ? "جهازك بلا صوت عربي. حمّل واحدًا: ماك/آيفون ← الإعدادات ← تسهيلات الاستخدام ← المحتوى المنطوق ← صوت النظام ← إدارة الأصوات ← العربية (ماجد أو طارق بجودة محسّنة)، أو استخدم Azure."
+        : good ? "✓ يوجد صوت عربي عالي الجودة في جهازك." : "الأصوات العربية المتاحة بجودة عادية وقد تبدو آلية. حمّل صوتًا محسّنًا (Enhanced) من إعدادات الجهاز، أو استخدم Azure للوضوح الكامل.";
     }
     if ("speechSynthesis" in window) {
       window.speechSynthesis.addEventListener?.("voiceschanged", populateVoices);
       window.speechSynthesis.getVoices();
     }
 
-    window.testVoice = function () {
+    window.testVoice = function (deviceOnly) {
       lsSet("jalees_voice_name", $("voiceSelect").value);
       lsSet("jalees_voice_rate", $("voiceRate").value);
-      window.speakText("يا هلا بوعلي. هذا صوت القراءة، وأتمنى أن يكون واضحًا ومريحًا لك. في صفحة مئة وخمسين، يوضح ابن خلدون أن الظلم مؤذن بخراب العمران.", { forceLocal: true });
+      lsSet("jalees_azure_key", $("azureKeyInput").value.trim());
+      lsSet("jalees_azure_region", $("azureRegionInput").value.trim());
+      lsSet("jalees_azure_voice", $("azureVoiceSelect").value);
+      const k = $("elevenKeyInput").value.trim();
+      if (k) lsSet("jalees_eleven_key", k);
+      window.speakText("يا هلا بوعلي. هذا صوت القراءة، وأتمنى أن يكون واضحًا ومريحًا لك. في صفحة مئة وخمسين، يوضح ابن خلدون أن الظلم مؤذن بخراب العمران، وأن العدل أساس بقاء الدول.", { forceLocal: deviceOnly === true });
     };
+
+    const xmlEsc = (t) => String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]));
+
+    async function azureBlob(text) {
+      const key = lsGet("jalees_azure_key");
+      const region = (lsGet("jalees_azure_region") || "uaenorth").trim().toLowerCase();
+      const voice = lsGet("jalees_azure_voice") || "ar-SA-HamedNeural";
+      const rate = Math.round(((parseFloat(lsGet("jalees_voice_rate")) || 0.9) - 1) * 100);
+      const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${voice.slice(0, 5)}"><voice name="${voice}"><prosody rate="${rate >= 0 ? "+" : ""}${rate}%">${xmlEsc(text)}</prosody></voice></speak>`;
+      const res = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+        method: "POST",
+        headers: { "Ocp-Apim-Subscription-Key": key, "Content-Type": "application/ssml+xml", "X-Microsoft-OutputFormat": "audio-24khz-96kbitrate-mono-mp3" },
+        body: ssml
+      });
+      if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? "مفتاح Azure أو منطقته غير صحيحة" : "Azure " + res.status);
+      return await res.blob();
+    }
+
+    async function elevenBlob(text) {
+      const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(lsGet("jalees_eleven_voice") || "pNInz6obpgDQGcFmaJgB")}`, {
+        method: "POST",
+        headers: { "xi-api-key": lsGet("jalees_eleven_key"), "Content-Type": "application/json" },
+        body: JSON.stringify({ text, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.25, use_speaker_boost: true } })
+      });
+      if (!res.ok) throw new Error("ElevenLabs " + res.status);
+      return await res.blob();
+    }
+
+    // يجمع الجمل في مقاطع بحجم مناسب للصوت السحابي
+    function groupForCloud(text, max = 320) {
+      const out = [];
+      for (const sen of splitForSpeech(text, max)) {
+        if (out.length && (out[out.length - 1] + " " + sen).length <= max) out[out.length - 1] += " " + sen;
+        else out.push(sen);
+      }
+      return out;
+    }
+
+    function playBlob(blob, token) {
+      return new Promise((resolve) => {
+        if (token !== speechToken) { resolve(); return; }
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        window.currentAudio = audio;
+        const done = () => { URL.revokeObjectURL(url); resolve(); };
+        audio.onended = done; audio.onerror = done;
+        audio.play().catch(done);
+      });
+    }
+
+    // يجلب المقطع التالي أثناء تشغيل الحالي لتقليل الانقطاع
+    async function speakCloud(chunks, fetchBlob, token) {
+      let next = fetchBlob(chunks[0]);
+      for (let i = 0; i < chunks.length; i++) {
+        const blob = await next;
+        if (token !== speechToken) return;
+        next = i + 1 < chunks.length ? fetchBlob(chunks[i + 1]) : null;
+        if (next) next.catch(() => {});
+        await playBlob(blob, token);
+      }
+    }
 
     window.speakText = async function (rawText, opts = {}) {
       window.stopSpeaking();
       const myToken = ++speechToken;
       const cleanText = prepareSpeech(rawText);
       if (!cleanText) return;
-      const elevenKey = opts.forceLocal ? "" : lsGet("jalees_eleven_key");
-      const voiceId = lsGet("jalees_eleven_voice") || "pNInz6obpgDQGcFmaJgB";
 
-      if (elevenKey) {
-        try {
-          const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
-            method: "POST",
-            headers: { "xi-api-key": elevenKey, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text: cleanText.slice(0, 2500),
-              model_id: "eleven_multilingual_v2",
-              voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.25, use_speaker_boost: true }
-            })
-          });
-          if (myToken !== speechToken) return;
-          if (res.ok) {
-            const audio = new Audio(URL.createObjectURL(await res.blob()));
-            window.currentAudio = audio;
-            await audio.play();
-            await new Promise(r => { audio.onended = r; audio.onerror = r; });
+      if (!opts.forceLocal) {
+        const engine = lsGet("jalees_azure_key") ? ["Azure", azureBlob] : lsGet("jalees_eleven_key") ? ["ElevenLabs", elevenBlob] : null;
+        if (engine) {
+          try {
+            await speakCloud(groupForCloud(cleanText), engine[1], myToken);
             return;
+          } catch (e) {
+            console.warn(engine[0] + " failed", e);
+            if (myToken !== speechToken) return;
+            toast(`تعذّر صوت ${engine[0]} (${e.message}). سيُستخدم صوت الجهاز.`);
           }
-          toast("تعذّر صوت ElevenLabs، سيُستخدم صوت الجهاز.");
-        } catch (e) { console.warn("elevenlabs failed", e); }
+        }
       }
 
       if (!("speechSynthesis" in window)) return;
       const voice = pickArabicVoice();
-      const rate = parseFloat(lsGet("jalees_voice_rate")) || 0.92;
+      const rate = parseFloat(lsGet("jalees_voice_rate")) || 0.9;
       const chunks = splitForSpeech(cleanText);
       await new Promise((resolve) => {
         let i = 0;
@@ -1092,7 +1180,7 @@
           if (voice) u.voice = voice;
           u.rate = rate;
           u.pitch = 1;
-          u.onend = () => setTimeout(next, 120); // وقفة قصيرة بين الجمل
+          u.onend = () => setTimeout(next, 120);
           u.onerror = () => resolve();
           window.speechSynthesis.speak(u);
         };
@@ -2418,21 +2506,61 @@ ${style}
     window.openModal = id => $(id).classList.remove("hidden");
     window.closeModal = id => $(id).classList.add("hidden");
 
-    window.saveSettings = function () {
-      const gKey = $("claudeKeyInput").value.trim();
-      const gModel = $("claudeModelSelect").value;
+    // ───────── المفاتيح: حفظ محلي + مزامنة اختيارية بحساب Google ─────────
+    const SECRET_KEYS = ["jalees_claude_key", "jalees_claude_model", "jalees_eleven_key", "jalees_eleven_voice", "jalees_azure_key", "jalees_azure_region", "jalees_azure_voice"];
+
+    function loadSettingsInputs() {
+      $("claudeKeyInput").value = lsGet("jalees_claude_key") || "";
+      $("elevenKeyInput").value = lsGet("jalees_eleven_key") || "";
+      $("elevenVoiceIdInput").value = lsGet("jalees_eleven_voice") || "pNInz6obpgDQGcFmaJgB";
+      $("azureKeyInput").value = lsGet("jalees_azure_key") || "";
+      $("azureRegionInput").value = lsGet("jalees_azure_region") || "";
+      $("azureVoiceSelect").value = lsGet("jalees_azure_voice") || "ar-SA-HamedNeural";
+      $("voiceRate").value = lsGet("jalees_voice_rate") || "0.9";
+      $("syncSecretsChk").checked = lsGet("jalees_sync_secrets") === "1";
+      populateModelSelects();
+      populateVoices();
+    }
+
+    async function pushSecrets() {
+      if (!db || !currentUser) throw new Error("سجّل الدخول بـ Google أولاً");
+      const data = { updatedAt: new Date().toISOString() };
+      SECRET_KEYS.forEach(k => { const v = lsGet(k); if (v) data[k] = v; });
+      await setDoc(doc(db, "jalees_secrets", currentUser.uid), data);
+    }
+
+    // يملأ فقط ما هو ناقص محليًا، فلا يكتب فوق مفاتيح الجهاز
+    async function pullSecrets() {
+      if (!db || !currentUser) return;
+      try {
+        const snap = await getDoc(doc(db, "jalees_secrets", currentUser.uid));
+        if (!snap.exists()) return;
+        const d = snap.data();
+        let n = 0;
+        SECRET_KEYS.forEach(k => { if (d[k] && !lsGet(k)) { lsSet(k, d[k]); n++; } });
+        if (n) { loadSettingsInputs(); toast(`✓ استُرجعت ${n} إعدادات ومفاتيح من حسابك`); }
+      } catch (e) { console.warn("pullSecrets", e); }
+    }
+    window.pullSecrets = pullSecrets;
+
+    window.saveSettings = async function () {
+      const setOrClear = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
+      setOrClear("jalees_claude_key", $("claudeKeyInput").value.trim());
+      setOrClear("jalees_claude_model", $("claudeModelSelect").value);
+      setOrClear("jalees_eleven_key", $("elevenKeyInput").value.trim());
+      setOrClear("jalees_eleven_voice", $("elevenVoiceIdInput").value.trim());
+      setOrClear("jalees_azure_key", $("azureKeyInput").value.trim());
+      setOrClear("jalees_azure_region", $("azureRegionInput").value.trim());
+      setOrClear("jalees_azure_voice", $("azureVoiceSelect").value);
       lsSet("jalees_voice_name", $("voiceSelect").value);
       lsSet("jalees_voice_rate", $("voiceRate").value);
-      const eKey = $("elevenKeyInput").value.trim();
-      const eVoice = $("elevenVoiceIdInput").value.trim();
-      const setOrClear = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
-      setOrClear("jalees_claude_key", gKey);
-      setOrClear("jalees_claude_model", gModel);
+      lsSet("jalees_sync_secrets", $("syncSecretsChk").checked ? "1" : "0");
       populateModelSelects();
-      setOrClear("jalees_eleven_key", eKey);
-      setOrClear("jalees_eleven_voice", eVoice);
       window.closeModal("settingsModal");
-      toast("تم حفظ إعداداتك يا بوعلي بنجاح!");
+      if ($("syncSecretsChk").checked) {
+        try { await pushSecrets(); toast("تم الحفظ، وحُفظت مفاتيحك في حسابك ✓"); }
+        catch (e) { toast("حُفظت على الجهاز، لكن تعذّر الحفظ في الحساب: " + (e.code === "permission-denied" ? "انشر قواعد Firestore الأقوى أولاً" : e.message)); }
+      } else toast("تم حفظ إعداداتك يا بوعلي بنجاح!");
     };
 
     let wakeLock = null;
@@ -2464,14 +2592,9 @@ ${style}
     });
 
     // ───────── التشغيل ─────────
-    $("claudeKeyInput").value = lsGet("jalees_claude_key") || "";
-    $("voiceRate").value = lsGet("jalees_voice_rate") || "0.92";
-    populateModelSelects();
-    populateVoices();
     // تنظيف بقايا مفاتيح Gemini القديمة
     ["jalees_gemini_key", "jalees_gemini_model"].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
-    $("elevenKeyInput").value = lsGet("jalees_eleven_key") || "";
-    $("elevenVoiceIdInput").value = lsGet("jalees_eleven_voice") || "pNInz6obpgDQGcFmaJgB";
+    loadSettingsInputs();
 
     $("webSearchQuery").addEventListener("keydown", e => { if (e.key === "Enter") window.searchBookOnline(); });
     $("userPromptInput").addEventListener("keydown", e => { if (e.key === "Enter") window.sendDiscussion(); });
