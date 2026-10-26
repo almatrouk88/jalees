@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// المستوى 1: يعمل مع التطبيق الحالي بلا أي تعديل (تسجيل دخول مجهول).
+// يضيّق الوصول إلى مستند واحد بشكل محدد، ويمنع الحذف والقوائم وأي مسار آخر.
+// تنبيه: أي زائر يستطيع إنشاء هوية مجهولة، فهذا يمنع العبث الواسع لا الوصول المتعمّد.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /jalees_library/ali_almatrouk_profile {
+      allow get: if request.auth != null;
+      allow list: if false;
+
+      allow create, update: if request.auth != null
+        && request.resource.data.keys().hasOnly(['owner', 'updatedAt', 'stateData'])
+        && request.resource.data.keys().hasAll(['owner', 'updatedAt', 'stateData'])
+        && request.resource.data.owner == 'علي المتروك'
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedAt.size() < 40
+        && request.resource.data.stateData is string
+        && request.resource.data.stateData.size() < 950000;
+
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

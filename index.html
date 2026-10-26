@@ -444,10 +444,20 @@
         </div>
       </div>
 
+      <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700 space-y-2">
+        <p class="text-xs font-bold text-amber-300">☁️ حساب المزامنة (Google)</p>
+        <p id="accountInfo" class="text-[11px] text-slate-300"></p>
+        <div class="flex gap-2">
+          <button onclick="signInGoogle()" id="signInBtn" class="flex-1 bg-white text-slate-900 font-bold py-2 rounded-xl text-xs">تسجيل الدخول بـ Google</button>
+          <button onclick="signOutGoogle()" id="signOutBtn" class="hidden bg-slate-800 border border-slate-700 text-slate-300 px-4 rounded-xl text-xs">خروج</button>
+        </div>
+      </div>
+
       <div class="space-y-1.5">
         <label class="text-xs font-bold text-slate-200">1. مفتاح Claude API (للنقاش وقراءة الأغلفة والتلخيص):</label>
         <input id="claudeKeyInput" type="password" placeholder="sk-ant-..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white" />
         <p class="text-[11px] text-slate-400">من console.anthropic.com. يُحفظ على جهازك فقط ولا يُرفع للسحابة.</p>
+        <p id="spendInfo" class="text-[11px] text-emerald-400"></p>
       </div>
 
       <div class="space-y-1.5">
@@ -478,7 +488,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     import Anthropic from "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.135.0/+esm";
@@ -495,13 +505,20 @@
     const LS_STATE = "jalees_ali_v4";
     const CLOUD_LIMIT = 900 * 1024; // حد مستند Firestore ≈ 1MB
 
-    let db = null;
+    let db = null, auth = null, currentUser = null;
     let authReady = Promise.resolve();
     try {
       const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
+      auth = getAuth(app);
       db = getFirestore(app);
-      authReady = signInAnonymously(auth).catch((e) => { console.warn("Anonymous auth failed:", e); });
+      authReady = new Promise((resolve) => {
+        onAuthStateChanged(auth, (u) => {
+          currentUser = (u && !u.isAnonymous) ? u : null; // الدخول المجهول القديم لا يُعدّ تسجيل دخول
+          resolve();
+          window.onAuthChange?.(currentUser);
+        });
+      });
+      getRedirectResult(auth).catch((e) => { console.warn("redirect sign-in failed", e); window.toast?.("تعذّر تسجيل الدخول: " + (e.code || e.message)); });
     } catch (e) {
       console.warn("Firebase fallback to local:", e);
     }
@@ -513,6 +530,7 @@
     const $ = (id) => document.getElementById(id);
     const arabicDigits = (s) => String(s).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
 
+    window.toast = (m) => toast(m);
     function toast(msg) {
       let t = $("toast");
       if (!t) {
@@ -674,15 +692,16 @@
       if (!lsSet(LS_STATE, JSON.stringify(state))) {
         setCloudStatus("● الحساب: @ali_almatrouk • تعذّر الحفظ المحلي (المساحة ممتلئة)", "text-rose-400");
       }
-      if (!db) { setCloudStatus("● الحساب: @ali_almatrouk • محفوظ محلياً", "text-amber-400"); return; }
+      if (!db) { setCloudStatus("● محفوظ محلياً", "text-amber-400"); return; }
       try {
         await authReady;
+        if (!currentUser) { setCloudStatus("● محفوظ محلياً • سجّل الدخول بـ Google من ⚙️ للمزامنة", "text-amber-400"); return; }
         await setDoc(doc(db, "jalees_library", "ali_almatrouk_profile"), {
           owner: "علي المتروك",
           updatedAt: state.updatedAt,
           stateData: cloudPayload()
         });
-        setCloudStatus("● الحساب: @ali_almatrouk • محفوظ بالسحابة ✓", "text-emerald-400");
+        setCloudStatus(`● ${currentUser.email || "حسابك"} • محفوظ بالسحابة ✓`, "text-emerald-400");
       } catch (e) {
         console.warn("cloud save failed", e);
         setCloudStatus("● الحساب: @ali_almatrouk • محفوظ محلياً (السحابة غير متاحة)", "text-amber-400");
@@ -690,9 +709,10 @@
     }
 
     async function loadFromCloud() {
-      if (!db) { setCloudStatus("● الحساب: @ali_almatrouk • وضع محلي", "text-amber-400"); return; }
+      if (!db) { setCloudStatus("● وضع محلي", "text-amber-400"); return; }
       try {
         await authReady;
+        if (!currentUser) { setCloudStatus("● محفوظ محلياً • سجّل الدخول بـ Google من ⚙️ للمزامنة", "text-amber-400"); return; }
         const snap = await getDoc(doc(db, "jalees_library", "ali_almatrouk_profile"));
         if (snap.exists() && snap.data().stateData) {
           const cloud = normalizeState(JSON.parse(snap.data().stateData));
@@ -715,13 +735,35 @@
           syncToCloud();
           return;
         }
-        setCloudStatus("● الحساب: @ali_almatrouk • متصل بالسحابة ✓", "text-emerald-400");
+        setCloudStatus(`● ${currentUser.email || "حسابك"} • متصل بالسحابة ✓`, "text-emerald-400");
       } catch (e) {
         console.warn("cloud load failed", e);
         setCloudStatus("● الحساب: @ali_almatrouk • وضع محلي (تعذّر الاتصال بالسحابة)", "text-amber-400");
       }
     }
     window.syncToCloud = syncToCloud;
+
+    window.onAuthChange = function (u) {
+      $("accountInfo").innerText = u ? `مسجّل الدخول: ${u.email}` : "غير مسجّل: مكتبتك تُحفظ على هذا الجهاز فقط. سجّل الدخول لتتزامن بين أجهزتك.";
+      $("signInBtn").classList.toggle("hidden", !!u);
+      $("signOutBtn").classList.toggle("hidden", !u);
+      loadFromCloud();
+    };
+    window.signInGoogle = async function () {
+      if (!auth) { toast("Firebase غير متاح."); return; }
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        if (["auth/popup-blocked", "auth/operation-not-supported-in-this-environment", "auth/cancelled-popup-request"].includes(e.code)) {
+          try { await signInWithRedirect(auth, provider); return; } catch (e2) { e = e2; }
+        }
+        if (e.code === "auth/popup-closed-by-user") return;
+        console.warn(e);
+        toast(e.code === "auth/operation-not-allowed" ? "فعّل Google في Firebase ← Authentication ← Sign-in method" : e.code === "auth/unauthorized-domain" ? "أضف almatrouk88.github.io إلى Authorized domains في Firebase" : "تعذّر تسجيل الدخول: " + (e.code || e.message));
+      }
+    };
+    window.signOutGoogle = async function () { try { await signOut(auth); toast("تم تسجيل الخروج؛ المكتبة تبقى على هذا الجهاز."); } catch (e) {} };
 
     function getCurrentBook() {
       if (!state.books || !state.books.length) return null;
@@ -1155,6 +1197,35 @@
       return e?.message || "خطأ غير معروف";
     }
 
+    // أسعار تقريبية بالدولار لكل مليون رمز: [إدخال، إخراج، قراءة من الكاش]
+    const PRICES = {
+      "claude-opus-5-5": [4, 20, 0.2], "claude-sonnet-5-5": [2, 10, 0.2], "claude-haiku-5-5": [0.1, 0.5, 0.01],
+      "claude-fable-5-1": [10, 50, 0.25], "claude-opus-5": [5, 25, 0.5], "claude-sonnet-5": [2, 10, 0.2]
+    };
+    function estimateCost(model, u) {
+      const pr = PRICES[model];
+      if (!pr || !u) return null;
+      const inTok = u.input_tokens || 0, out = u.output_tokens || 0, cr = u.cache_read_input_tokens || 0, cw = u.cache_creation_input_tokens || 0;
+      return (inTok * pr[0] + cw * pr[0] * 1.25 + cr * pr[2] + out * pr[1]) / 1e6;
+    }
+    let lastUsage = null;
+    function addSpend(usd) {
+      if (!usd) return;
+      const month = new Date().toISOString().slice(0, 7);
+      let sp = {};
+      try { sp = JSON.parse(lsGet("jalees_spend") || "{}"); } catch (e) {}
+      if (sp.month !== month) sp = { month, usd: 0 };
+      sp.usd += usd;
+      lsSet("jalees_spend", JSON.stringify(sp));
+      paintSpend();
+    }
+    function paintSpend() {
+      let sp = {};
+      try { sp = JSON.parse(lsGet("jalees_spend") || "{}"); } catch (e) {}
+      const el = $("spendInfo");
+      if (el) el.innerText = sp.month === new Date().toISOString().slice(0, 7) ? `إنفاق هذا الشهر على هذا الجهاز (تقريبي): $${sp.usd.toFixed(2)}` : "لا إنفاق مسجّل هذا الشهر بعد.";
+    }
+
     // content: نص أو مصفوفة كتل (نص/صورة). يعيد نص الرد.
     async function callClaude(content, { system, maxTokens = 8000, history = [] } = {}) {
       const client = getClient();
@@ -1170,6 +1241,10 @@
         if (FALLBACK_MODELS.has(model) && e?.status === 400) res = await client.messages.create(params); // الحساب لا يدعم التراجع التلقائي
         else throw e;
       }
+      const u = res.usage || {};
+      const cost = estimateCost(model, u);
+      lastUsage = { model, in: u.input_tokens || 0, out: u.output_tokens || 0, cacheRead: u.cache_read_input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, cost };
+      addSpend(cost);
       if (res.stop_reason === "refusal") throw new Error("رفض Claude هذا الطلب");
       const text = (res.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
       if (!text) throw new Error("رد فارغ");
@@ -1449,7 +1524,7 @@
           <div class="text-[11px] text-slate-400">ص ${esc(d.page)} • ${d.type === "insight" ? "💡" : d.type === "critique" ? "✍️" : "🎙️"}</div>
           <div class="bg-slate-800/80 rounded-xl rounded-tr-sm px-3 py-2 text-xs text-slate-200 whitespace-pre-line">${esc(d.userText)}</div>
           <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl rounded-tl-sm px-3 py-2.5 text-sm text-slate-100 leading-relaxed whitespace-pre-line">${esc(d.aiText)}
-            <div class="pt-1.5"><button onclick="speakDiscussion('${esc(book.id)}','${esc(d.id)}')" class="text-[11px] text-amber-300 font-bold">🔊 استمع</button></div></div>
+            <div class="pt-1.5 flex items-center justify-between gap-2"><button onclick="speakDiscussion('${esc(book.id)}','${esc(d.id)}')" class="text-[11px] text-amber-300 font-bold">🔊 استمع</button>${typeof d.cost === "number" ? `<span class="text-[10px] text-slate-500">≈ $${d.cost.toFixed(3)}${d.cached ? ` • ${d.cached}% من الكاش` : ""}</span>` : ""}</div></div>
         </div>`).join("");
       if (pendingText) html += `<div class="space-y-1.5"><div class="bg-slate-800/80 rounded-xl px-3 py-2 text-xs text-slate-200">${esc(pendingText)}</div><div class="text-xs text-amber-300 animate-pulse">⏳ Claude يفكر...</div></div>`;
       if (!html) html = `<p class="text-sm text-slate-300 leading-relaxed">حياك الله يا علي. اضغط المايكروفون أو اكتب مداخلتك، أو جرّب أحد الأسئلة الجاهزة بالأعلى. كل نقاش يُحفظ في أرشيف الكتاب.</p>`;
@@ -1482,7 +1557,9 @@
       let contextBlock = "";
       if (scope === "book" && hasText) {
         const w = wholeBookText(pages);
-        if (w.chars > 120000 && !confirm(`سيُرسل نحو ${Math.round(w.chars / 1000)} ألف حرف من الكتاب إلى Claude${w.sampled ? " (عيّنة موزعة على الكتاب كله)" : ""}، وقد يستهلك رصيدًا أكبر من النقاش العادي. المتابعة؟`)) return;
+        const pr = PRICES[getModel()];
+        const estUsd = pr ? (w.chars / 2.5) / 1e6 * pr[0] : null;
+        if (w.chars > 120000 && !confirm(`سيُرسل نحو ${Math.round(w.chars / 1000)} ألف حرف من الكتاب إلى Claude${w.sampled ? " (عيّنة موزعة على الكتاب كله)" : ""}.` + (estUsd ? `\nالتكلفة التقريبية لأول طلب: $${estUsd.toFixed(2)}. الأسئلة التالية عن نفس الكتاب خلال ٥ دقائق أرخص بكثير بفضل التخزين المؤقت.` : "") + `\nالمتابعة؟`)) return;
         contextBlock = `نص الكتاب${w.sampled ? ` (عيّنة من ${w.count} صفحة من أصل ${w.total})` : ""}:\n${w.text}`;
       } else if (scope === "connect") {
         const others = state.books.flatMap(b => (b.discussions || []).slice(0, 15).map(d => `- [${b.title} ص${d.page}] ${d.topic}: ${String(d.userText).slice(0, 120)} ⟵ ${String(d.aiText).slice(0, 200)}`)).slice(0, 60);
@@ -1497,16 +1574,25 @@
         ? `- الرد سيُسمع بصوت مسموع: جمل قصيرة واضحة، بلا قوائم ولا رموز ولا markdown ولا أقواس زائدة؛ استعمل «أولًا، ثانيًا...» عند العدّ، واكتب أرقام الصفحات بالحروف.`
         : `- الرد سيُقرأ مكتوبًا: يمكنك قوائم قصيرة بنقاط «•» وفقرات مرتبة، بلا رموز markdown مثل ** أو #.`;
       const noText = hasText ? "" : `\n- لا يتوفر نص الكتاب لديك الآن؛ اعتمد على معرفتك وبيّن بإيجاز أنك لا ترى النص، ولا تقدّم اقتباسًا على أنه حرفي ما لم تكن متأكدًا.`;
-      const system = `أنت "جليس"، شريك القراءة الخاص للمهندس علي المتروك (بوعلي). يقرأ كتابًا ورقيًا ويناقشك فيه.
-الكتاب: "${book.title}" للمؤلف "${book.author}" (طبعة: ${book.publisher}). هو الآن في الصفحة الورقية رقم ${paperPage}.` +
-        (book.summary ? `\nنبذة الكتاب: ${book.summary}` : "") +
-        (contextBlock ? `\n\n${contextBlock}` : "") +
-        `\n\nتعليمات الرد:
+      const bookLine = `الكتاب: "${book.title}" للمؤلف "${book.author}" (طبعة: ${book.publisher}).`;
+      const rules = `\n\nتعليمات الرد:
 - ${action?.json ? "أجب بـ JSON فقط كما طُلب." : "ابدأ السطر الأول بـ [الموضوع: عنوان من ثلاث إلى خمس كلمات] ثم اكتب الرد من السطر التالي."}
 - خاطبه باسمه (يا بوعلي) بنبرة ودودة رجولية مع ترحيب خليجي خفيف، والشرح بالعربية الفصحى السهلة.
 ${style}
 - رتّب الرد: الجواب أولًا، ثم تفصيل أو مثال قصير، ثم سؤال واحد يدفع النقاش للأمام${action ? "" : "، ولا تتجاوز نحو ١٥٠ كلمة إلا إن طلب التوسّع"}.
 - لا تختلق اقتباسات ولا معلومات؛ إن لم تكن متأكدًا فقل ذلك.${noText}`;
+      const persona = `أنت "جليس"، شريك القراءة الخاص للمهندس علي المتروك (بوعلي). يقرأ كتابًا ورقيًا ويناقشك فيه.`;
+      const where = `هو الآن في الصفحة الورقية رقم ${paperPage}.` + (book.summary ? `\nنبذة الكتاب: ${book.summary}` : "");
+      let system;
+      if (scope === "book" && contextBlock) {
+        // الكتلة الكبيرة أولًا وثابتة بين الأسئلة، فتُخزَّن مؤقتًا؛ وما يتغير (الصفحة والتعليمات) بعدها
+        system = [
+          { type: "text", text: `${persona}\n${bookLine}\n\n${contextBlock}`, cache_control: { type: "ephemeral" } },
+          { type: "text", text: where + rules }
+        ];
+      } else {
+        system = `${persona}\n${bookLine} ${where}` + (contextBlock ? `\n\n${contextBlock}` : "") + rules;
+      }
 
       const history = [];
       (book.discussions || []).slice(0, 4).reverse().forEach(d => {
@@ -1546,7 +1632,9 @@ ${style}
           type,
           userText,
           aiText: reply,
-          date: new Date().toLocaleDateString("ar-KW")
+          date: new Date().toLocaleDateString("ar-KW"),
+          cost: lastUsage?.cost ?? null,
+          cached: lastUsage && (lastUsage.cacheRead + lastUsage.in) ? Math.round(lastUsage.cacheRead / (lastUsage.cacheRead + lastUsage.in + lastUsage.cacheWrite) * 100) : 0
         });
         $("userPromptInput").value = "";
         window.clearSnappedPage();
@@ -2367,11 +2455,11 @@ ${style}
     $("userPromptInput").addEventListener("keydown", e => { if (e.key === "Enter") window.sendDiscussion(); });
 
     renderQuickActions();
+    paintSpend();
     paintAutoSpeak();
     paintCont();
     showQuote();
     window.renderAll();
-    loadFromCloud();
 
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("sw.js").catch(() => {});

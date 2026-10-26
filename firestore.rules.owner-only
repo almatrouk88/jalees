@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// المستوى 2 (الأقوى): لا يقرأ ولا يكتب إلا حسابك على Google.
+// يتطلب تعديل التطبيق ليسجّل الدخول بـ Google، وتفعيل Google في Firebase ← Authentication.
+// الهوية المجهولة لا تحمل بريدًا، فتُرفض تلقائيًا.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == 'aqmsmm@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    match /jalees_library/ali_almatrouk_profile {
+      allow get: if isOwner();
+      allow list: if false;
+
+      allow create, update: if isOwner()
+        && request.resource.data.keys().hasOnly(['owner', 'updatedAt', 'stateData'])
+        && request.resource.data.keys().hasAll(['owner', 'updatedAt', 'stateData'])
+        && request.resource.data.owner == 'علي المتروك'
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedAt.size() < 40
+        && request.resource.data.stateData is string
+        && request.resource.data.stateData.size() < 950000;
+
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
